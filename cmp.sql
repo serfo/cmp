@@ -1,3 +1,18 @@
+/*
+ Navicat Premium Data Transfer
+
+ Source Server         : 192.168.20.154
+ Source Server Type    : MySQL
+ Source Server Version : 80045 (8.0.45)
+ Source Host           : 192.168.20.154:3306
+ Source Schema         : cmp
+
+ Target Server Type    : MySQL
+ Target Server Version : 80045 (8.0.45)
+ File Encoding         : 65001
+
+ Date: 22/04/2026 10:43:17
+*/
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -20,7 +35,11 @@ CREATE TABLE `ai_analyses`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `ai_analyses_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 99 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'ai分析记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 99 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'ai分析记录表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of ai_analyses
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for alarm_record
@@ -35,7 +54,11 @@ CREATE TABLE `alarm_record`  (
   `trigger_time` datetime NOT NULL COMMENT '触发时间',
   `status` tinyint NOT NULL COMMENT '告警状态',
   PRIMARY KEY (`alarm_id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '告警信息记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '告警信息记录表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of alarm_record
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for config_history
@@ -58,7 +81,11 @@ CREATE TABLE `config_history`  (
   INDEX `changed_by`(`changed_by` ASC) USING BTREE,
   CONSTRAINT `config_history_ibfk_1` FOREIGN KEY (`config_id`) REFERENCES `system_configs` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `config_history_ibfk_2` FOREIGN KEY (`changed_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 48 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '系统配置修改记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 49 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '系统配置修改记录' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of config_history
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for email_logs
@@ -74,7 +101,11 @@ CREATE TABLE `email_logs`  (
   `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
   `created_at` datetime NOT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 79 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '邮件发送记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 79 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '邮件发送记录表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of email_logs
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for servers
@@ -98,7 +129,11 @@ CREATE TABLE `servers`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `ip`(`ip` ASC) USING BTREE,
   INDEX `idx_servers_ip`(`ip` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 43 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '服务器表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 43 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '服务器表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of servers
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for system_configs
@@ -126,7 +161,28 @@ CREATE TABLE `system_configs`  (
   INDEX `idx_config_category`(`category` ASC) USING BTREE,
   CONSTRAINT `system_configs_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `system_configs_ibfk_2` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '系统配置表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_bin COMMENT = '系统配置表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of system_configs
+-- ----------------------------
+INSERT INTO `system_configs` VALUES (1, 'AI_API_KEY', '', 'string', 'ai', 'AI API密钥', 1, 1, '2026-01-31 12:05:37', '2026-01-31 12:05:37', NULL, NULL);
+INSERT INTO `system_configs` VALUES (2, 'AI_API_URL', 'https://api.deepseek.com/v1/chat/completions', 'string', 'ai', 'AI API地址', 1, 0, '2026-01-31 12:05:38', '2026-01-31 12:05:38', NULL, NULL);
+INSERT INTO `system_configs` VALUES (4, 'BACKUP_DIR', '/tmp/test_backup', 'string', 'backup', '备份目录', 1, 0, '2026-01-31 12:05:38', '2026-04-12 10:49:48', NULL, NULL);
+INSERT INTO `system_configs` VALUES (5, 'BACKUP_INTERVAL', '600', 'int', 'backup', '备份间隔(秒)', 1, 0, '2026-01-31 12:05:39', '2026-04-12 04:26:31', NULL, NULL);
+INSERT INTO `system_configs` VALUES (6, 'DEBUG', 'true', 'bool', 'flask', '调试模式', 1, 0, '2026-01-31 12:05:39', '2026-01-31 12:05:39', NULL, NULL);
+INSERT INTO `system_configs` VALUES (7, 'LOGIN_VIEW', 'auth.login', 'string', 'flask', '登录视图', 1, 0, '2026-01-31 12:05:40', '2026-01-31 12:05:40', NULL, NULL);
+INSERT INTO `system_configs` VALUES (12, 'MAIL_DEFAULT_SENDER', '', 'string', 'email', '默认发件人', 1, 0, '2026-01-31 12:05:42', '2026-01-31 12:05:42', NULL, NULL);
+INSERT INTO `system_configs` VALUES (13, 'MAIL_PASSWORD', '', 'string', 'email', '邮件密码', 1, 1, '2026-01-31 12:05:42', '2026-04-21 01:30:04', NULL, NULL);
+INSERT INTO `system_configs` VALUES (14, 'MAIL_PORT', '', 'int', 'email', '邮件端口', 1, 0, '2026-01-31 12:05:42', '2026-01-31 12:05:42', NULL, NULL);
+INSERT INTO `system_configs` VALUES (15, 'MAIL_SERVER', '', 'string', 'email', '邮件服务器', 1, 0, '2026-01-31 12:05:43', '2026-01-31 12:05:43', NULL, NULL);
+INSERT INTO `system_configs` VALUES (16, 'MAIL_USERNAME', '', 'string', 'email', '邮件用户名', 1, 1, '2026-01-31 12:05:44', '2026-04-12 04:28:01', NULL, NULL);
+INSERT INTO `system_configs` VALUES (17, 'MAIL_USE_SSL', 'true', 'bool', 'email', '使用SSL', 1, 0, '2026-01-31 12:05:44', '2026-01-31 12:05:44', NULL, NULL);
+INSERT INTO `system_configs` VALUES (18, 'MAIL_USE_TLS', 'false', 'bool', 'email', '使用TLS', 1, 0, '2026-01-31 12:05:44', '2026-01-31 12:05:44', NULL, NULL);
+INSERT INTO `system_configs` VALUES (19, 'SECRET_KEY', 'your-secret-key-here', 'string', 'flask', 'Flask密钥', 0, 1, '2026-01-31 12:05:45', '2026-01-31 12:05:45', NULL, NULL);
+INSERT INTO `system_configs` VALUES (21, 'SQLALCHEMY_TRACK_MODIFICATIONS', 'false', 'bool', 'database', '跟踪修改', 1, 0, '2026-01-31 12:05:46', '2026-01-31 12:05:46', NULL, NULL);
+INSERT INTO `system_configs` VALUES (22, 'ZABBIX_TOKEN', '', 'string', 'zabbix', 'Zabbix令牌', 1, 1, '2026-01-31 12:05:46', '2026-02-07 14:45:08', NULL, NULL);
+INSERT INTO `system_configs` VALUES (23, 'ZABBIX_URL', 'http://xxx:8080/api_jsonrpc.php', 'string', 'zabbix', 'Zabbix地址', 1, 0, '2026-01-31 12:05:46', '2026-02-07 14:29:20', NULL, NULL);
 
 -- ----------------------------
 -- Table structure for task_logs
@@ -142,7 +198,11 @@ CREATE TABLE `task_logs`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `task_id`(`task_id` ASC) USING BTREE,
   CONSTRAINT `task_logs_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 223 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '任务日志表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 223 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '任务日志表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of task_logs
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for tasks
@@ -166,7 +226,11 @@ CREATE TABLE `tasks`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `created_by`(`created_by` ASC) USING BTREE,
   CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 92 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '任务表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 92 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '任务表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of tasks
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for users
@@ -185,6 +249,11 @@ CREATE TABLE `users`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `username`(`username` ASC) USING BTREE,
   UNIQUE INDEX `email`(`email` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of users
+-- ----------------------------
+INSERT INTO `users` VALUES (6, 'admin', 'pbkdf2:sha256:1000000$de8VhZCjySgr7pLb$ac104ccb0e2cb61315cb3a78943ef822ac97f2c6834546e0bcc4f3bda5243f9a', '123@123.com', 'admin', '2026-04-22 02:36:49', '2026-04-22 10:37:36', 100, 0);
 
 SET FOREIGN_KEY_CHECKS = 1;
