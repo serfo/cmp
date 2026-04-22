@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="row justify-content-between align-items-center mb-4">
+        <div class="col">
+            <h2 class="text-primary">备份恢复</h2>
+        </div>
+    </div>
+
+    <!-- 恢复备份表单 -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5>选择备份进行恢复</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('backup.restore') }}">
+                <div class="mb-3">
+                    <label for="backup_id" class="form-label">备份文件</label>
+                    <select class="form-select" id="backup_id" name="backup_id" required>
+                        <option value="">选择要恢复的备份</option>
+                        <!-- 这里将动态生成备份文件列表 -->
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="restore_path" class="form-label">恢复路径</label>
+                    <input type="text" class="form-control" id="restore_path" name="restore_path" required placeholder="例如：/home/backup/restore">
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" value="" id="overwrite" name="overwrite">
+                    <label class="form-check-label" for="overwrite">
+                        覆盖现有文件
+                    </label>
+                </div>
+                <div class="alert alert-warning" role="alert">
+                    <strong>警告：</strong> 恢复操作可能会覆盖现有数据，请谨慎操作！
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-danger">确认恢复</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 恢复历史 -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5>恢复历史</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>备份名称</th>
+                            <th>恢复时间</th>
+                            <th>恢复路径</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" class="text-center">暂无恢复记录</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

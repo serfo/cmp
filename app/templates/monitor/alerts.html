@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-icon">
+                <i class="bi bi-bell-fill"></i>
+            </div>
+            <div class="page-header-text">
+                <h1 class="page-title">告警管理</h1>
+                <p class="page-subtitle">从 Zabbix 实时获取活跃告警，告警恢复后自动消失</p>
+            </div>
+        </div>
+        <div class="page-header-actions">
+            <button class="btn btn-primary" onclick="refreshAlertPage()">
+                <i class="bi bi-arrow-clockwise me-2"></i>刷新
+            </button>
+        </div>
+    </div>
+
+    <!-- 告警统计卡片 -->
+    <div class="stats-grid">
+        <div class="stat-card stat-info">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-total">{{ alerts|length }}</span>
+                    <span class="stat-label">活跃告警</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card stat-warning">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-warning">{{ warnings_count }}</span>
+                    <span class="stat-label">警告</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card stat-danger">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon">
+                    <i class="bi bi-x-circle-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-error">{{ errors_count }}</span>
+                    <span class="stat-label">错误/严重</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 告警列表 -->
+    <div class="content-card">
+        <div class="content-card-header">
+            <div class="card-header-icon">
+                <i class="bi bi-list-check"></i>
+            </div>
+            <h5 class="content-card-title">活跃告警列表</h5>
+        </div>
+        <div class="content-card-body">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-clock me-2"></i>时间</th>
+                            <th><i class="bi bi-server me-2"></i>服务器</th>
+                            <th><i class="bi bi-tag-fill me-2"></i>类型</th>
+                            <th><i class="bi bi-exclamation-triangle me-2"></i>级别</th>
+                            <th><i class="bi bi-chat-text me-2"></i>告警信息</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alerts-table-body">
+                        {% if alerts %}
+                            {% for alert in alerts %}
+                                <tr data-alert-id="{{ alert.id }}" class="alert-active">
+                                    <td>{{ alert.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>{{ alert.server.name if alert.server else '未知主机' }}</td>
+                                    <td>
+                                        {% if alert.alert_type == 'zabbix' %}
+                                            <span class="badge bg-primary-subtle text-primary">
+                                                <i class="bi bi-activity me-1"></i>Zabbix 监控
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary-subtle text-secondary">
+                                                <i class="bi bi-tag me-1"></i>{{ alert.alert_type }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if alert.severity == 'info' %}
+                                            <span class="severity-badge severity-info"><i class="bi bi-info-circle me-1"></i>信息</span>
+                                        {% elif alert.severity == 'warning' %}
+                                            <span class="severity-badge severity-warning"><i class="bi bi-exclamation-triangle me-1"></i>警告</span>
+                                        {% elif alert.severity == 'error' %}
+                                            <span class="severity-badge severity-error"><i class="bi bi-x-circle me-1"></i>错误</span>
+                                        {% elif alert.severity == 'critical' %}
+                                            <span class="severity-badge severity-critical"><i class="bi bi-exclamation-diamond me-1"></i>严重</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ alert.message }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="empty-state">
+                                        <div class="empty-icon"><i class="bi bi-bell-slash"></i></div>
+                                        <p class="empty-text">暂无活跃告警</p>
+                                        <span class="empty-hint">系统运行正常</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    async function refreshAlertPage() {
+        try {
+            const response = await fetch('/monitor/api/zabbix_alerts');
+            const result = await response.json();
+            if (result.success) {
+                renderAlertsTable(result.alerts);
+                updateStats(result.alerts);
+            }
+        } catch (error) {
+            console.error('刷新告警失败:', error);
+        }
+    }
+
+    function renderAlertsTable(alerts) {
+        const tbody = document.getElementById('alerts-table-body');
+        if (!tbody) return;
+
+        if (!alerts || alerts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="empty-state"><div class="empty-icon"><i class="bi bi-bell-slash"></i></div><p class="empty-text">暂无活跃告警</p><span class="empty-hint">系统运行正常</span></div></td></tr>';
+            return;
+        }
+
+        const severityMap = {
+            'info': '<span class="severity-badge severity-info"><i class="bi bi-info-circle me-1"></i>信息</span>',
+            'warning': '<span class="severity-badge severity-warning"><i class="bi bi-exclamation-triangle me-1"></i>警告</span>',
+            'error': '<span class="severity-badge severity-error"><i class="bi bi-x-circle me-1"></i>错误</span>',
+            'critical': '<span class="severity-badge severity-critical"><i class="bi bi-exclamation-diamond me-1"></i>严重</span>'
+        };
+
+        let html = '';
+        for (const a of alerts) {
+            const severityHtml = severityMap[a.severity] || severityMap['info'];
+            html += `<tr data-alert-id="${a.eventid}" class="alert-active">
+                <td>${a.created_at}</td>
+                <td>${a.server_name}</td>
+                <td><span class="badge bg-primary-subtle text-primary"><i class="bi bi-activity me-1"></i>Zabbix 监控</span></td>
+                <td>${severityHtml}</td>
+                <td>${a.name}</td>
+            </tr>`;
+        }
+        tbody.innerHTML = html;
+    }
+
+    function updateStats(alerts) {
+        let total = alerts.length, warning = 0, error = 0;
+        for (const a of alerts) {
+            if (a.severity === 'warning') warning++;
+            else if (a.severity === 'error' || a.severity === 'critical') error++;
+        }
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-warning').textContent = warning;
+        document.getElementById('stat-error').textContent = error;
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(refreshAlertPage, 30000);
+    </script>
+{% endblock %}

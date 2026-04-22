@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <!-- 页面头部 -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-icon">
+                <i class="bi bi-robot"></i>
+            </div>
+            <div class="page-header-text">
+                <h1 class="page-title">AI日志分析</h1>
+                <p class="page-subtitle">智能日志诊断与根因分析</p>
+            </div>
+        </div>
+        <div class="page-header-actions">
+            <button class="btn btn-outline-primary" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise me-2"></i>刷新
+            </button>
+        </div>
+    </div>
+
+    <!-- AI配额统计 -->
+    <div class="stats-grid">
+        <div class="stat-card stat-info">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-box-seam-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ ai_quota.total }}</span>
+                    <span class="stat-label">总配额</span>
+                </div>
+                <div class="stat-trend trend-info"><i class="bi bi-box"></i><span>额度</span></div>
+            </div>
+        </div>
+        <div class="stat-card stat-warning">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-bar-chart-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ ai_quota.used }}</span>
+                    <span class="stat-label">已使用</span>
+                </div>
+                <div class="stat-trend trend-warning"><i class="bi bi-bar-chart"></i><span>消耗</span></div>
+            </div>
+        </div>
+        <div class="stat-card stat-success">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-piggy-bank-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ ai_quota.remaining }}</span>
+                    <span class="stat-label">剩余</span>
+                </div>
+                <div class="stat-trend trend-success"><i class="bi bi-piggy-bank"></i><span>可用</span></div>
+            </div>
+        </div>
+        <div class="stat-card {% if ai_quota.remaining > 0 %}stat-primary{% else %}stat-danger{% endif %}">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-speedometer2"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ "%.0f"|format((ai_quota.used / ai_quota.total) * 100 if ai_quota.total > 0 else 0) }}%</span>
+                    <span class="stat-label">使用率</span>
+                </div>
+                <div class="stat-trend {% if ai_quota.remaining > 0 %}trend-primary{% else %}trend-danger{% endif %}">
+                    <i class="bi {% if ai_quota.remaining > 0 %}bi-check-circle{% else %}bi-exclamation-circle{% endif %}"></i>
+                    <span>{% if ai_quota.remaining > 0 %}正常{% else %}已耗尽{% endif %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 配额进度条 -->
+    <div class="content-card mb-4">
+        <div class="card-header-custom">
+            <h5 class="card-header-title"><i class="bi bi-battery-half me-2"></i>配额使用进度</h5>
+        </div>
+        <div class="card-body-custom">
+            <div class="d-flex align-items-center gap-3">
+                <div class="flex-grow-1">
+                    <div class="progress" style="height: 24px; border-radius: 12px;">
+                        {% set pct = (ai_quota.used / ai_quota.total * 100) if ai_quota.total > 0 else 0 %}
+                        <div class="progress-bar {% if pct >= 90 %}bg-danger{% elif pct >= 70 %}bg-warning{% else %}bg-success{% endif %}"
+                             role="progressbar"
+                             style="width: {{ pct }}%; border-radius: 12px;"
+                             aria-valuenow="{{ ai_quota.used }}"
+                             aria-valuemin="0"
+                             aria-valuemax="{{ ai_quota.total }}">
+                            {{ ai_quota.used }} / {{ ai_quota.total }}
+                        </div>
+                    </div>
+                </div>
+                <span class="badge {% if pct >= 90 %}bg-danger{% elif pct >= 70 %}bg-warning{% else %}bg-success{% endif %} fs-6">
+                    {{ "%.0f"|format(pct) }}%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="content-card mb-4" style="border-color: var(--danger);">
+        <div class="card-body-custom">
+            <div class="d-flex align-items-center gap-3">
+                <div class="stat-icon stat-danger" style="width:48px;height:48px;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div>
+                    <h6 class="mb-1" style="color: var(--danger);">配额不足</h6>
+                    <p class="text-muted mb-0">{{ error }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 日志分析表单 -->
+    <div class="content-card mb-4">
+        <div class="card-header-custom">
+            <h5 class="card-header-title"><i class="bi bi-terminal me-2"></i>日志分析</h5>
+        </div>
+        <div class="card-body-custom">
+            <form method="POST" action="{{ url_for('log.analysis') }}" id="analysisForm">
+                <div class="mb-4">
+                    <label for="log_content" class="form-label fw-semibold">
+                        <i class="bi bi-file-text me-1"></i>日志内容
+                    </label>
+                    <textarea class="form-control" id="log_content" name="log_content"
+                              rows="10" required
+                              placeholder="请粘贴要分析的日志内容，支持多行日志..."
+                              style="font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace; font-size: 13px; border-radius: 8px; border: 2px solid var(--gray-200); background: var(--gray-50);">{{ log_content }}</textarea>
+                    <div class="form-text mt-2">
+                        <i class="bi bi-lightbulb me-1"></i>建议粘贴包含错误或异常的日志片段，AI将自动识别问题并提供解决方案
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="analysis_type" class="form-label fw-semibold">
+                        <i class="bi bi-gear me-1"></i>分析类型
+                    </label>
+                    <select class="form-select" id="analysis_type" name="analysis_type"
+                            required style="border-radius: 8px; border: 2px solid var(--gray-200);">
+                        <option value="error_detection" {% if analysis_type == 'error_detection' %}selected{% endif %}>
+                            错误检测 — 自动识别日志中的错误和异常
+                        </option>
+                        <option value="root_cause" {% if analysis_type == 'root_cause' %}selected{% endif %}>
+                            根因分析 — 深入分析问题根本原因
+                        </option>
+                        <option value="solution" {% if analysis_type == 'solution' %}selected{% endif %}>
+                            解决方案 — 提供具体修复建议和步骤
+                        </option>
+                        <option value="optimization" {% if analysis_type == 'optimization' %}selected{% endif %}>
+                            优化建议 — 分析性能瓶颈和优化方向
+                        </option>
+                    </select>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    {% if ai_quota.remaining > 0 %}
+                    <button type="submit" class="btn btn-success px-4" style="border-radius: 8px;">
+                        <i class="bi bi-robot me-2"></i>开始分析
+                    </button>
+                    {% else %}
+                    <button type="button" class="btn btn-danger px-4" style="border-radius: 8px;" disabled>
+                        <i class="bi bi-ban me-2"></i>配额已耗尽
+                    </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-secondary px-4" style="border-radius: 8px;"
+                            onclick="document.getElementById('log_content').value='';">
+                        <i class="bi bi-eraser me-2"></i>清空
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 分析结果 -->
+    <div class="content-card">
+        <div class="card-header-custom">
+            <h5 class="card-header-title"><i class="bi bi-clipboard-data me-2"></i>分析结果</h5>
+            {% if result %}
+            <div class="d-flex align-items-center gap-2">
+                {% if result.analysis_type == 'error_detection' %}
+                <span class="severity-badge severity-info"><i class="bi bi-search me-1"></i>错误检测</span>
+                {% elif result.analysis_type == 'root_cause' %}
+                <span class="severity-badge severity-warning"><i class="bi bi-diagram-3 me-1"></i>根因分析</span>
+                {% elif result.analysis_type == 'solution' %}
+                <span class="severity-badge severity-success"><i class="bi bi-wrench me-1"></i>解决方案</span>
+                {% elif result.analysis_type == 'optimization' %}
+                <span class="severity-badge severity-primary"><i class="bi bi-lightning me-1"></i>优化建议</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-body-custom">
+            {% if result %}
+            <!-- 可信度指标 -->
+            <div class="d-flex align-items-center gap-3 mb-4 p-3 rounded" style="background: var(--gray-50);">
+                <div class="d-flex align-items-center flex-grow-1">
+                    <span class="fw-semibold me-2"><i class="bi bi-shield-check me-1"></i>可信度</span>
+                    <div class="progress flex-grow-1" style="height: 10px; border-radius: 5px; max-width: 200px;">
+                        {% set conf_pct = result.confidence * 100 %}
+                        <div class="progress-bar {% if conf_pct >= 80 %}bg-success{% elif conf_pct >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                             style="width: {{ conf_pct }}%; border-radius: 5px;"></div>
+                    </div>
+                    <span class="ms-2 badge {% if conf_pct >= 80 %}bg-success{% elif conf_pct >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                        {{ "%.1f"|format(conf_pct) }}%
+                    </span>
+                </div>
+                <div class="text-muted small">
+                    <i class="bi bi-clock me-1"></i>{{ result.analysis_type }}
+                </div>
+            </div>
+
+            <!-- 详细分析 -->
+            <div class="p-4 rounded" style="background: var(--gray-50); border: 2px solid var(--gray-200);">
+                <h6 class="fw-semibold mb-3" style="color: var(--primary);">
+                    <i class="bi bi-file-earmark-text me-1"></i>详细分析
+                </h6>
+                <div class="markdown-content" style="font-size: 14px; line-height: 1.8;">
+                    {{ result.html_content|safe }}
+                </div>
+            </div>
+
+            <!-- 结论摘要 -->
+            {% if result.conclusion %}
+            <div class="mt-4 p-3 rounded" style="background: linear-gradient(135deg, rgba(var(--success-rgb), 0.08), rgba(var(--primary-rgb), 0.08)); border: 1px solid var(--gray-200);">
+                <h6 class="fw-semibold mb-2" style="color: var(--success);">
+                    <i class="bi bi-check-circle me-1"></i>结论摘要
+                </h6>
+                <p class="mb-0">{{ result.conclusion }}</p>
+            </div>
+            {% endif %}
+
+            {% if result.suggestions %}
+            <div class="mt-4">
+                <h6 class="fw-semibold mb-3" style="color: var(--primary);">
+                    <i class="bi bi-lightbulb me-1"></i>建议措施
+                </h6>
+                <div class="row g-3">
+                    {% for suggestion in result.suggestions %}
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: var(--gray-50); border: 1px solid var(--gray-200);">
+                            <div class="d-flex align-items-start gap-2">
+                                <span class="badge bg-primary mt-1">{{ loop.index }}</span>
+                                <span>{{ suggestion }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <!-- 空状态 -->
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <h5 class="empty-state-title">等待分析</h5>
+                <p class="empty-state-text">请输入日志内容并选择分析类型，点击"开始分析"获取AI诊断结果</p>
+                <div class="d-flex justify-content-center gap-3 mt-3">
+                    <div class="text-center p-3 rounded" style="background: var(--gray-50);">
+                        <i class="bi bi-search fs-4 text-primary"></i>
+                        <div class="small text-muted mt-1">错误检测</div>
+                    </div>
+                    <div class="text-center p-3 rounded" style="background: var(--gray-50);">
+                        <i class="bi bi-diagram-3 fs-4 text-warning"></i>
+                        <div class="small text-muted mt-1">根因分析</div>
+                    </div>
+                    <div class="text-center p-3 rounded" style="background: var(--gray-50);">
+                        <i class="bi bi-wrench fs-4 text-success"></i>
+                        <div class="small text-muted mt-1">解决方案</div>
+                    </div>
+                    <div class="text-center p-3 rounded" style="background: var(--gray-50);">
+                        <i class="bi bi-lightning fs-4" style="color: var(--primary);"></i>
+                        <div class="small text-muted mt-1">优化建议</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4>编辑服务器</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('server.edit', id=server.id) }}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">服务器名称</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ server.name }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="ip" class="form-label">IP地址</label>
+                                <input type="text" class="form-control" id="ip" name="ip" value="{{ server.ip }}" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="port" class="form-label">SSH端口</label>
+                                <input type="number" class="form-control" id="port" name="port" value="{{ server.port }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="username" class="form-label">SSH用户名</label>
+                                <input type="text" class="form-control" id="username" name="username" value="{{ server.username }}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">SSH密码（留空则不修改）</label>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="留空则不修改">
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('server.index') }}" class="btn btn-secondary">取消</a>
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

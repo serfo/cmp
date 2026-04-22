@@ -1,0 +1,446 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-icon">
+                <i class="bi bi-activity"></i>
+            </div>
+            <div class="page-header-text">
+                <h1 class="page-title">服务器监控</h1>
+                <p class="page-subtitle">实时掌握服务器运行状态与性能指标</p>
+            </div>
+        </div>
+        <div class="page-header-actions">
+            <a href="{{ url_for('static', filename='monitor/dashboard/index.html') }}" class="btn btn-primary" target="_blank">
+                <i class="bi bi-display-fill me-2"></i>监控大屏
+            </a>
+            <button class="btn btn-success" onclick="deployZabbixAgent()">
+                <i class="bi bi-rocket-takeoff me-2"></i>部署监控agent
+            </button>
+            
+            <script>
+                function deployZabbixAgent() {
+                    const taskName = encodeURIComponent('部署zabbix-agent');
+                    const taskType = 'deploy';
+                    const command = encodeURIComponent('/bin/bash -c "curl -fsSL https://supome.cn/zabbix.sh | bash; sleep 5; if [ -f /usr/local/zabbix_agent/etc/zabbix_agentd.conf ]; then sed -i \'s/127.0.0.1/203.195.208.165/g\' /usr/local/zabbix_agent/etc/zabbix_agentd.conf; fi; systemctl restart zabbix-agent 2>/dev/null || service zabbix-agent restart 2>/dev/null"');
+
+                    window.location.href = `{{ url_for('automation.add') }}?task_type=${taskType}&name=${taskName}&command=${command}`;
+                }
+            </script>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card stat-success">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ online_count }}</span>
+                    <span class="stat-label">在线服务器</span>
+                </div>
+                <div class="stat-trend trend-up">
+                    <i class="bi bi-arrow-up"></i>
+                    <span>正常</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card stat-warning">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ warning_count }}</span>
+                    <span class="stat-label">警告告警</span>
+                </div>
+                <div class="stat-trend trend-warning">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <span>注意</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card stat-danger">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon">
+                    <i class="bi bi-x-circle-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ error_count }}</span>
+                    <span class="stat-label">错误告警</span>
+                </div>
+                <div class="stat-trend trend-danger">
+                    <i class="bi bi-exclamation-diamond"></i>
+                    <span>紧急</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card stat-info">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon">
+                    <i class="bi bi-server-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ total_count }}</span>
+                    <span class="stat-label">总服务器数</span>
+                </div>
+                <div class="stat-trend trend-info">
+                    <i class="bi bi-info-circle"></i>
+                    <span>全部</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-card">
+        <div class="content-card-header">
+            <div class="card-header-icon">
+                <i class="bi bi-table"></i>
+            </div>
+            <h5 class="content-card-title">服务器监控状态</h5>
+            <div class="card-header-actions">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="搜索服务器..." class="form-control">
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshMonitoringData()" title="刷新监控数据">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+        </div>
+        <div class="content-card-body">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-hdd-network me-2"></i>服务器名称</th>
+                            <th><i class="bi bi-cpu me-2"></i>CPU使用率</th>
+                            <th><i class="bi bi-memory me-2"></i>内存使用率</th>
+                            <th><i class="bi bi-network me-2"></i>网络流量</th>
+                            <th><i class="bi bi-circle-fill me-2"></i>状态</th>
+                            <th><i class="bi bi-gear me-2"></i>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="server-list">
+                        {% for server in servers %}
+                            {% set monitoring = server_monitoring_data[server.id] %}
+                            <tr data-server-id="{{ server.id }}">
+                                <td>
+                                    <div class="server-name">
+                                        <div class="server-icon">
+                                            <i class="bi bi-hdd-stack-fill"></i>
+                                        </div>
+                                        <div class="server-info">
+                                            <span class="server-title">{{ server.name }}</span>
+                                            <span class="server-ip">{{ server.ip_address }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="progress-wrapper">
+                                        <div class="progress-label">
+                                            <span class="cpu-value">{{ monitoring.cpu_usage }}%</span>
+                                        </div>
+                                        <div class="progress progress-modern">
+                                            <div class="progress-bar cpu-bar {% if monitoring.cpu_usage < 60 %}bg-success{% elif monitoring.cpu_usage < 80 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ monitoring.cpu_usage }}%" 
+                                                 data-cpu="{{ monitoring.cpu_usage }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="progress-wrapper">
+                                        <div class="progress-label">
+                                            <span class="memory-value">{{ monitoring.memory_usage }}%</span>
+                                        </div>
+                                        <div class="progress progress-modern">
+                                            <div class="progress-bar memory-bar {% if monitoring.memory_usage < 60 %}bg-success{% elif monitoring.memory_usage < 80 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ monitoring.memory_usage }}%" 
+                                                 data-memory="{{ monitoring.memory_usage }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="network-stats">
+                                        <div class="network-item">
+                                            <i class="bi bi-arrow-down-circle text-success"></i>
+                                            <span class="network-in">--</span>
+                                        </div>
+                                        <div class="network-item">
+                                            <i class="bi bi-arrow-up-circle text-primary"></i>
+                                            <span class="network-out">--</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if server.status == 'online' %}
+                                        <span class="status-badge status-online">
+                                            <i class="bi bi-check-circle me-1"></i>在线
+                                        </span>
+                                    {% elif server.status == 'warning' %}
+                                        <span class="status-badge status-warning">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>警告
+                                        </span>
+                                    {% elif server.status == 'error' %}
+                                        <span class="status-badge status-error">
+                                            <i class="bi bi-x-circle me-1"></i>错误
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge status-offline">
+                                            <i class="bi bi-slash-circle me-1"></i>离线
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{{ url_for('monitor.server_detail', server_id=server.id) }}" class="btn btn-sm btn-icon btn-primary" title="详情">
+                                            <i class="bi bi-eye-fill"></i>
+                                        </a>
+                                        {% if not server.zabbix_hostid %}
+                                            <a href="{{ url_for('monitor.add_to_zabbix', server_id=server.id) }}" class="btn btn-sm btn-icon btn-success" title="添加到Zabbix">
+                                                <i class="bi bi-plus-circle-fill"></i>
+                                            </a>
+                                        {% else %}
+                                            <span class="badge bg-success-subtle text-success">
+                                                <i class="bi bi-check-circle me-1"></i>已监控
+                                            </span>
+                                            <a href="{{ url_for('monitor.remove_from_zabbix', server_id=server.id) }}" class="btn btn-sm btn-icon btn-danger" title="移除">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="content-card">
+        <div class="content-card-header">
+            <div class="card-header-icon">
+                <i class="bi bi-bell-fill"></i>
+            </div>
+            <h5 class="content-card-title">活跃告警</h5>
+            <div class="card-header-actions">
+                <a href="{{ url_for('monitor.alerts') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-list me-1"></i>查看全部
+                </a>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshAlerts()" title="刷新告警">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+        </div>
+        <div class="content-card-body">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-clock me-2"></i>时间</th>
+                            <th><i class="bi bi-server me-2"></i>服务器</th>
+                            <th><i class="bi bi-tag-fill me-2"></i>类型</th>
+                            <th><i class="bi bi-exclamation-triangle me-2"></i>级别</th>
+                            <th><i class="bi bi-chat-text me-2"></i>内容</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alert-list">
+                        {% if alerts %}
+                            {% for alert in alerts %}
+                                <tr data-alert-id="{{ alert.id }}" class="alert-active">
+                                    <td>
+                                        <span class="alert-time">
+                                            <i class="bi bi-clock-history me-1"></i>
+                                            {{ alert.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="alert-server">
+                                            <i class="bi bi-hdd-stack me-1"></i>
+                                            {{ alert.server.name if alert.server else '未知主机' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="alert-type">
+                                            <i class="bi bi-activity me-1"></i>Zabbix 监控
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if alert.severity == 'info' %}
+                                            <span class="severity-badge severity-info">
+                                                <i class="bi bi-info-circle me-1"></i>信息
+                                            </span>
+                                        {% elif alert.severity == 'warning' %}
+                                            <span class="severity-badge severity-warning">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>警告
+                                            </span>
+                                        {% elif alert.severity == 'error' %}
+                                            <span class="severity-badge severity-error">
+                                                <i class="bi bi-x-circle me-1"></i>错误
+                                            </span>
+                                        {% elif alert.severity == 'critical' %}
+                                            <span class="severity-badge severity-critical">
+                                                <i class="bi bi-exclamation-diamond me-1"></i>严重
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="alert-message">{{ alert.message }}</span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="empty-state">
+                                        <div class="empty-icon">
+                                            <i class="bi bi-bell-slash"></i>
+                                        </div>
+                                        <p class="empty-text">暂无活跃告警</p>
+                                        <span class="empty-hint">系统运行正常，所有指标均在正常范围内</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    async function refreshMonitoringData() {
+        try {
+            const response = await fetch('/monitor/api/monitoring');
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                Object.keys(result.data).forEach(serverId => {
+                    updateServerRow(serverId, result.data[serverId]);
+                });
+            }
+        } catch (error) {
+            console.error('获取监控数据失败:', error);
+        }
+    }
+
+    async function refreshAlerts() {
+        try {
+            const response = await fetch('/monitor/api/zabbix_alerts');
+            const result = await response.json();
+
+            if (result.success) {
+                renderAlerts(result.alerts);
+                updateAlertStats(result.alerts);
+            }
+        } catch (error) {
+            console.error('获取告警数据失败:', error);
+        }
+    }
+
+    function renderAlerts(alerts) {
+        const tbody = document.getElementById('alert-list');
+        if (!tbody) return;
+
+        if (!alerts || alerts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="empty-state"><div class="empty-icon"><i class="bi bi-bell-slash"></i></div><p class="empty-text">暂无活跃告警</p><span class="empty-hint">系统运行正常，所有指标均在正常范围内</span></div></td></tr>';
+            return;
+        }
+
+        const severityLabels = {
+            'info': '<span class="severity-badge severity-info"><i class="bi bi-info-circle me-1"></i>信息</span>',
+            'warning': '<span class="severity-badge severity-warning"><i class="bi bi-exclamation-triangle me-1"></i>警告</span>',
+            'error': '<span class="severity-badge severity-error"><i class="bi bi-x-circle me-1"></i>错误</span>',
+            'critical': '<span class="severity-badge severity-critical"><i class="bi bi-exclamation-diamond me-1"></i>严重</span>'
+        };
+
+        let html = '';
+        for (const alert of alerts) {
+            const severityHtml = severityLabels[alert.severity] || severityLabels['info'];
+            html += `<tr data-alert-id="${alert.eventid}" class="alert-active">
+                <td><span class="alert-time"><i class="bi bi-clock-history me-1"></i>${alert.created_at}</span></td>
+                <td><span class="alert-server"><i class="bi bi-hdd-stack me-1"></i>${alert.server_name}</span></td>
+                <td><span class="alert-type"><i class="bi bi-activity me-1"></i>Zabbix 监控</span></td>
+                <td>${severityHtml}</td>
+                <td><span class="alert-message">${alert.name}</span></td>
+            </tr>`;
+        }
+        tbody.innerHTML = html;
+    }
+
+    function updateAlertStats(alerts) {
+        let warningCount = 0, errorCount = 0;
+        for (const a of alerts) {
+            if (a.severity === 'warning') warningCount++;
+            else if (a.severity === 'error' || a.severity === 'critical') errorCount++;
+        }
+        const warningEl = document.querySelector('.stat-card.stat-warning .stat-value');
+        const errorEl = document.querySelector('.stat-card.stat-danger .stat-value');
+        if (warningEl) warningEl.textContent = warningCount;
+        if (errorEl) errorEl.textContent = errorCount;
+    }
+
+    function updateServerRow(serverId, data) {
+        const row = document.querySelector(`tr[data-server-id="${serverId}"]`);
+        if (!row) return;
+
+        const cpuValue = row.querySelector('.cpu-value');
+        const cpuBar = row.querySelector('.cpu-bar');
+        const memoryValue = row.querySelector('.memory-value');
+        const memoryBar = row.querySelector('.memory-bar');
+        const networkIn = row.querySelector('.network-in');
+        const networkOut = row.querySelector('.network-out');
+
+        if (cpuValue) cpuValue.textContent = data.cpu_usage + '%';
+        if (cpuBar) {
+            cpuBar.style.width = data.cpu_usage + '%';
+            cpuBar.dataset.cpu = data.cpu_usage;
+            cpuBar.className = 'progress-bar cpu-bar ' + getProgressClass(data.cpu_usage);
+        }
+        if (memoryValue) memoryValue.textContent = data.memory_usage + '%';
+        if (memoryBar) {
+            memoryBar.style.width = data.memory_usage + '%';
+            memoryBar.dataset.memory = data.memory_usage;
+            memoryBar.className = 'progress-bar memory-bar ' + getProgressClass(data.memory_usage);
+        }
+        if (networkIn) networkIn.textContent = formatNetworkSpeed(data.network_in);
+        if (networkOut) networkOut.textContent = formatNetworkSpeed(data.network_out);
+    }
+
+    function getProgressClass(value) {
+        if (value < 60) return 'bg-success';
+        if (value < 80) return 'bg-warning';
+        return 'bg-danger';
+    }
+
+    function formatNetworkSpeed(bytes) {
+        if (bytes >= 1024 * 1024) {
+            return (bytes / 1024 / 1024).toFixed(2) + ' MB/s';
+        }
+        if (bytes >= 1024) {
+            return (bytes / 1024).toFixed(2) + ' KB/s';
+        }
+        return bytes.toFixed(2) + ' B/s';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initial load
+        setTimeout(refreshMonitoringData, 500);
+        setTimeout(refreshAlerts, 1000);
+        // Auto-refresh: monitoring every 30s, alerts every 30s
+        setInterval(refreshMonitoringData, 30000);
+        setInterval(refreshAlerts, 30000);
+    });
+    </script>
+{% endblock %}

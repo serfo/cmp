@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="云管平台 - 一站式服务器管理、监控与自动化运维平台">
+    <title>云管平台 | 智能云端管理</title>
+    <link href="{{ url_for('static', filename='lib/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons - 使用多个 CDN 备用 -->
+    <link id="bootstrap-icons-link" rel="stylesheet" href="https://fastly.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script>
+        (function() {
+            var link = document.getElementById('bootstrap-icons-link');
+            var cdnList = [
+                'https://fastly.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css',
+                'https://cdn.bootcdn.net/npm/bootstrap-icons@1.11.0/css/bootstrap-icons.css',
+                'https://unpkg.com/bootstrap-icons@1.11.0/font/bootstrap-icons.css'
+            ];
+            var currentCDN = 0;
+            
+            function tryNextCDN() {
+                currentCDN++;
+                if (currentCDN < cdnList.length) {
+                    console.warn('CDN ' + (currentCDN) + ' 加载失败，尝试下一个...');
+                    link.href = cdnList[currentCDN];
+                } else {
+                    console.error('所有 CDN 都加载失败，尝试本地...');
+                    link.href = '{{ url_for('static', filename='lib/bootstrap-icons/bootstrap-icons.css') }}';
+                }
+            }
+            
+            link.onerror = function() {
+                tryNextCDN();
+            };
+            
+            window.bootstrapIconsLoaded = true;
+            console.log('Bootstrap Icons 加载成功');
+        })();
+    </script>
+    
+    <!-- ECharts - 使用 CDN -->
+    <script src="https://fastly.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-modern">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="{{ url_for('server.index') }}">
+                <div class="brand-icon">
+                    <i class="bi bi-cloud-check"></i>
+                </div>
+                <span class="brand-text">云管平台</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('server.index') }}">
+                                <i class="bi bi-server me-2"></i>服务器管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('monitor.index') }}">
+                                <i class="bi bi-activity me-2"></i>监控管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('automation.index') }}">
+                                <i class="bi bi-gear-wide-connected me-2"></i>自动化运维
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('log.index') }}">
+                                <i class="bi bi-journal-text me-2"></i>日志管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('backup.index') }}">
+                                <i class="bi bi-cloud-upload me-2"></i>备份管理
+                            </a>
+                        </li>
+                        {% if current_user.role == 'admin' %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-gear-wide-connected me-2"></i>配置
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{{ url_for('config.index') }}"><i class="bi bi-gear me-2"></i>系统配置</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('auth.user_info') }}"><i class="bi bi-person-badge me-2"></i>用户配置</a></li>
+
+                                </ul>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav auth-nav">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item user-profile">
+                            <a class="nav-link" href="{{ url_for('auth.user_info') }}">
+                                <div class="user-avatar">
+                                    <i class="bi bi-person-circle"></i>
+                                </div>
+                                <span class="user-name">{{ current_user.username }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link btn-logout" href="{{ url_for('auth.logout') }}">
+                                <i class="bi bi-box-arrow-right me-2"></i>退出登录
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link btn-auth" href="{{ url_for('auth.login') }}">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>登录
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link btn-auth-outline" href="{{ url_for('auth.register') }}">
+                                <i class="bi bi-person-plus me-2"></i>注册
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container-fluid px-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="notification-wrapper">
+                        {% for category, message in messages %}
+                            <div class="notification notification-{{ category }}" role="alert">
+                                <div class="notification-icon">
+                                    {% if category == 'success' %}
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    {% elif category == 'error' %}
+                                        <i class="bi bi-exclamation-circle-fill"></i>
+                                    {% elif category == 'warning' %}
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                    {% else %}
+                                        <i class="bi bi-info-circle-fill"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="notification-content">
+                                    <span class="notification-message">{{ message }}</span>
+                                </div>
+                                <button type="button" class="notification-close" data-bs-dismiss="alert" aria-label="Close">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer-modern">
+        <div class="container-fluid px-4">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <i class="bi bi-cloud-check"></i>
+                        <span>云管平台</span>
+                    </div>
+                    <p class="footer-tagline">智能云端管理解决方案</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-section">
+                        <h6>产品</h6>
+                        <a href="#">功能特性</a>
+                        <a href="#">定价方案</a>
+                        <a href="#">使用文档</a>
+                    </div>
+                    <div class="footer-section">
+                        <h6>公司</h6>
+                        <a href="#">关于我们</a>
+                        <a href="#">联系我们</a>
+                        <a href="#">加入团队</a>
+                    </div>
+                    <div class="footer-section">
+                        <h6>法律</h6>
+                        <a href="#">隐私政策</a>
+                        <a href="#">服务条款</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 云管平台. All rights reserved. Designed with <i class="bi bi-heart-fill text-danger"></i> for modern cloud management.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 下拉菜单修复样式 -->
+    <style>
+        /* 确保下拉菜单在导航栏上方 */
+        .navbar .dropdown {
+            position: relative;
+        }
+        
+        .navbar .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: auto;
+            right: 0;
+            z-index: 1050;
+            display: none;
+            min-width: 200px;
+            padding: 0.5rem 0;
+            margin: 0.125rem 0 0;
+            font-size: 0.9375rem;
+            color: var(--gray-800);
+            text-align: left;
+            list-style: none;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* 显示下拉菜单 */
+        .navbar .dropdown.show .dropdown-menu,
+        .navbar .dropdown-menu.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+            animation: dropdownFadeIn 0.2s ease-out;
+        }
+        
+        @keyframes dropdownFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* 下拉菜单项样式 */
+        .navbar .dropdown-menu .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 1.25rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            transition: all 0.2s ease;
+        }
+        
+        .navbar .dropdown-menu .dropdown-item:hover {
+            background: var(--primary-50);
+            color: var(--primary-600);
+            padding-left: 1.5rem;
+        }
+        
+        .navbar .dropdown-menu .dropdown-item i {
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* 下拉菜单分隔线 */
+        .navbar .dropdown-menu .dropdown-divider {
+            height: 1px;
+            margin: 0.5rem 0;
+            overflow: hidden;
+            background: var(--gray-200);
+        }
+        
+        /* 下拉菜单箭头指示 */
+        .navbar .dropdown-toggle::after {
+            display: inline-block;
+            margin-left: 0.5em;
+            vertical-align: 0.255em;
+            content: "";
+            border-top: 0.3em solid;
+            border-right: 0.3em solid transparent;
+            border-bottom: 0;
+            border-left: 0.3em solid transparent;
+            transition: transform 0.2s ease;
+        }
+        
+        .navbar .dropdown.show .dropdown-toggle::after {
+            transform: rotate(180deg);
+        }
+        
+        /* 确保导航栏容器正确 */
+        .navbar-collapse {
+            flex-basis: auto;
+            flex-grow: 1;
+            align-items: center;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 991.98px) {
+            .navbar .dropdown-menu {
+                position: static !important;
+                float: none;
+                width: 100%;
+                margin-top: 0.25rem;
+                background-color: var(--gray-50, #f9fafb);
+                border: none;
+                box-shadow: none;
+                border-radius: 0.5rem;
+                padding: 0.25rem 0;
+            }
+
+            .navbar .dropdown-menu .dropdown-item {
+                padding: 0.625rem 1.5rem;
+                font-size: 0.9375rem;
+            }
+
+            .navbar .dropdown-toggle::after {
+                float: right;
+                margin-top: 0.5em;
+            }
+        }
+    </style>
+
+    <script src="{{ url_for('static', filename='lib/bootstrap/js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <!-- 下拉菜单修复脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 修复Bootstrap下拉菜单在导航栏中的显示问题
+            const dropdowns = document.querySelectorAll('.navbar .dropdown');
+
+            dropdowns.forEach(function(dropdown) {
+                const toggle = dropdown.querySelector('.dropdown-toggle');
+                const menu = dropdown.querySelector('.dropdown-menu');
+
+                if (toggle && menu) {
+                    // 点击切换
+                    toggle.addEventListener('click', function(e) {
+                        e.preventDefault();
+
+                        // 关闭其他下拉菜单
+                        dropdowns.forEach(function(otherDropdown) {
+                            if (otherDropdown !== dropdown) {
+                                otherDropdown.classList.remove('show');
+                                const otherMenu = otherDropdown.querySelector('.dropdown-menu');
+                                if (otherMenu) {
+                                    otherMenu.classList.remove('show');
+                                }
+                            }
+                        });
+
+                        // 切换当前下拉菜单
+                        dropdown.classList.toggle('show');
+                        menu.classList.toggle('show');
+
+                        // 更新aria-expanded
+                        const isShown = dropdown.classList.contains('show');
+                        toggle.setAttribute('aria-expanded', isShown);
+                    });
+
+                    // 点击外部关闭
+                    document.addEventListener('click', function(e) {
+                        if (!dropdown.contains(e.target)) {
+                            dropdown.classList.remove('show');
+                            menu.classList.remove('show');
+                            toggle.setAttribute('aria-expanded', 'false');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,517 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <!-- 页面头部 -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-icon">
+                <i class="bi bi-journal-text"></i>
+            </div>
+            <div class="page-header-text">
+                <h1 class="page-title">日志分析系统</h1>
+                <p class="page-subtitle">高性能本地日志浏览与智能分析</p>
+            </div>
+        </div>
+        <div class="page-header-actions">
+            <button class="btn btn-success" onclick="window.location.href='/automation/add?name=%E5%BC%80%E5%90%AF%E4%B8%BB%E6%9C%BA%E6%97%A5%E5%BD%97%E6%94%B6%E9%9B%86&task_type=deploy&command=%2Fbin%2Fbash%20-c%20%22curl%20-fsSL%20https%3A%2F%2Fsupome.cn%2Finstall_rsyslog.sh%7Cbash%22'">
+                <i class="bi bi-cloud-upload me-2"></i>开启主机收集日志
+            </button>
+        </div>
+    </div>
+
+    <!-- 日志统计 -->
+    <div class="stats-grid">
+        <div class="stat-card stat-success">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-list-ul"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-total">{{ stats.total_lines or 0 }}</span>
+                    <span class="stat-label">总日志数</span>
+                </div>
+                <div class="stat-trend trend-up"><i class="bi bi-database"></i><span>总量</span></div>
+            </div>
+        </div>
+        <div class="stat-card stat-info" onclick="filterByLevel('info')">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-info-circle-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-info">{{ stats.by_level.info or 0 }}</span>
+                    <span class="stat-label">INFO</span>
+                </div>
+                <div class="stat-trend trend-info"><i class="bi bi-info-circle"></i><span>信息</span></div>
+            </div>
+        </div>
+        <div class="stat-card stat-warning" onclick="filterByLevel('warning')">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-warning">{{ stats.by_level.warning or 0 }}</span>
+                    <span class="stat-label">WARNING</span>
+                </div>
+                <div class="stat-trend trend-warning"><i class="bi bi-exclamation-circle"></i><span>注意</span></div>
+            </div>
+        </div>
+        <div class="stat-card stat-danger" onclick="filterByLevel('error')">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-x-circle-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-error">{{ stats.by_level.error or 0 }}</span>
+                    <span class="stat-label">ERROR</span>
+                </div>
+                <div class="stat-trend trend-danger"><i class="bi bi-exclamation-diamond"></i><span>错误</span></div>
+            </div>
+        </div>
+        <div class="stat-card stat-critical-card" onclick="filterByLevel('critical')">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-fire-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-critical">{{ stats.by_level.critical or 0 }}</span>
+                    <span class="stat-label">CRITICAL</span>
+                </div>
+                <div class="stat-trend trend-critical"><i class="bi bi-fire"></i><span>严重</span></div>
+            </div>
+        </div>
+        <div class="stat-card stat-debug" onclick="filterByLevel('debug')">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-bug-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-debug">{{ stats.by_level.debug or 0 }}</span>
+                    <span class="stat-label">DEBUG</span>
+                </div>
+                <div class="stat-trend trend-debug"><i class="bi bi-bug"></i><span>调试</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志查询区域 -->
+    <div class="content-card">
+        <div class="content-card-header">
+            <div class="card-header-icon">
+                <i class="bi bi-search"></i>
+            </div>
+            <h5 class="content-card-title">日志查询</h5>
+        </div>
+        <div class="content-card-body">
+            <div id="log-filter-section">
+                <div class="row g-3">
+                    <!-- 日期选择 -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold"><i class="bi bi-calendar3 me-1"></i>选择日期</label>
+                        <select class="form-select" id="date" onchange="loadServers()">
+                            {% for date in available_dates %}
+                                <option value="{{ date }}" {% if selected_date == date %}selected{% endif %}>
+                                    {{ date }} {% if date == today_str %}(今天){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- 服务器选择 -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold"><i class="bi bi-server me-1"></i>服务器选择</label>
+                        <div class="d-flex gap-2 mb-2">
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="selectAllServers()">全选</button>
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="clearServerSelection()">清空</button>
+                        </div>
+                        <div class="server-chips" id="server-chips">
+                            {% for server_ip in available_servers %}
+                                <div class="server-chip {% if server_ip in selected_servers %}active{% endif %}"
+                                     onclick="toggleServer('{{ server_ip }}')">
+                                    {{ server_ip }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- 日志级别 -->
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold"><i class="bi bi-flag me-1"></i>日志级别</label>
+                        <select class="form-select" id="level" onchange="searchLogs()">
+                            <option value="">所有级别</option>
+                            <option value="debug" {% if level == 'debug' %}selected{% endif %}>DEBUG 调试</option>
+                            <option value="info" {% if level == 'info' %}selected{% endif %}>INFO 信息</option>
+                            <option value="warning" {% if level == 'warning' %}selected{% endif %}>WARNING 警告</option>
+                            <option value="error" {% if level == 'error' %}selected{% endif %}>ERROR 错误</option>
+                            <option value="critical" {% if level == 'critical' %}selected{% endif %}>CRITICAL 严重</option>
+                            <option value="unknown" {% if level == 'unknown' %}selected{% endif %}>UNKNOWN 未知</option>
+                        </select>
+                    </div>
+
+                    <!-- 关键词搜索 -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold"><i class="bi bi-search me-1"></i>关键词搜索</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="keyword"
+                                   value="{{ keyword or '' }}" placeholder="输入关键词...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearKeyword()">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-12 d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="searchLogs()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>刷新
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="clearAllFilters()">
+                            <i class="bi bi-x-circle me-2"></i>清除过滤
+                        </button>
+                        <select class="form-select d-inline-block w-auto ms-2" id="per-page" onchange="changePerPage(this.value)" style="max-width: 160px;">
+                            <option value="20" {% if per_page == 20 %}selected{% endif %}>20 条/页</option>
+                            <option value="50" {% if per_page == 50 %}selected{% endif %}>50 条/页</option>
+                            <option value="100" {% if per_page == 100 %}selected{% endif %}>100 条/页</option>
+                        </select>
+                        <span class="badge bg-primary-subtle text-primary ms-auto" id="total-count">{{ total }} 条日志</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志列表 -->
+    <div class="content-card" id="log-card">
+        <div class="content-card-header">
+            <div class="card-header-icon">
+                <i class="bi bi-list-ul"></i>
+            </div>
+            <h5 class="content-card-title">日志列表</h5>
+        </div>
+        <div class="content-card-body" id="log-list-container">
+            {% if logs %}
+            {% for log in logs %}
+            <div class="log-entry {{ log.level }}">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="log-timestamp">
+                        <i class="bi bi-clock me-1"></i>
+                        {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </div>
+                    <div>
+                        {% if log.level == 'error' %}
+                            <span class="severity-badge severity-error">{{ log.level.upper() }}</span>
+                        {% elif log.level == 'warning' %}
+                            <span class="severity-badge severity-warning">{{ log.level.upper() }}</span>
+                        {% elif log.level == 'critical' %}
+                            <span class="severity-badge severity-critical">{{ log.level.upper() }}</span>
+                        {% elif log.level == 'debug' %}
+                            <span class="severity-badge severity-debug">{{ log.level.upper() }}</span>
+                        {% elif log.level == 'unknown' %}
+                            <span class="severity-badge severity-unknown">UNKNOWN</span>
+                        {% else %}
+                            <span class="severity-badge severity-info">{{ log.level.upper() }}</span>
+                        {% endif %}
+                        <span class="badge bg-light text-dark ms-2">
+                            <i class="bi bi-hdd-network me-1"></i>{{ log.hostname }}
+                        </span>
+                    </div>
+                </div>
+                <div class="log-message" onclick="toggleExpand(this)">{{ log.message }}</div>
+                <div class="mt-2 d-flex align-items-center">
+                    <small class="text-muted"><i class="bi bi-gear me-1"></i>{{ log.process }}</small>
+                    <button class="btn btn-sm btn-outline-primary ms-3 rounded-pill px-2" onclick="copyLog(this.dataset.raw)" data-raw="{{ log.raw|e }}">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-2" onclick="analyzeThisLog(this.dataset.raw)" data-raw="{{ log.raw|e }}">
+                        <i class="bi bi-robot"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center py-5" id="empty-state">
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                    <p class="empty-text">暂无日志数据</p>
+                    {% if stats.no_results %}
+                    <span class="empty-hint">没有找到符合条件的日志</span>
+                    <div class="mt-3">
+                        {% for suggestion in stats.suggestions %}
+                        <div class="text-muted small">{{ suggestion }}</div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <span class="empty-hint">请选择服务器和日期查看日志</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 分页 -->
+    <nav aria-label="日志分页" id="pagination-container">
+        {% if pagination.pages > 1 %}
+        <ul class="pagination justify-content-center mt-4">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="javascript:loadPage({{ pagination.prev_num }})">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            {% endif %}
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="javascript:loadPage({{ page_num }})">{{ page_num }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                {% endif %}
+            {% endfor %}
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="javascript:loadPage({{ pagination.next_num }})">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        {% endif %}
+    </nav>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loading" style="display: none;">
+        <div class="text-center text-white">
+            <div class="spinner-border mb-3" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <h5>正在加载日志数据...</h5>
+            <p class="small mb-0">请稍候</p>
+        </div>
+    </div>
+
+    <!-- 日志样式 -->
+    <style>
+        .log-entry {
+            border-left: 4px solid var(--gray-200);
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            transition: all 0.2s ease;
+        }
+        .log-entry:hover { border-left-color: var(--primary-500); box-shadow: var(--shadow-sm); }
+        .log-entry.error { border-left-color: var(--danger-500); background: rgba(239,68,68,0.04); }
+        .log-entry.warning { border-left-color: var(--warning-500); background: rgba(245,158,11,0.04); }
+        .log-entry.critical { border-left-color: var(--gray-800); background: rgba(55,65,81,0.06); }
+        .log-entry.info { border-left-color: var(--primary-400); }
+        .log-entry.debug { border-left-color: var(--gray-300); background: var(--gray-50); }
+        .log-entry.unknown { border-left-color: var(--gray-200); background: var(--gray-50); }
+        .log-timestamp { color: var(--gray-600); font-size: 0.875rem; font-weight: 600; }
+        .log-message {
+            font-family: 'SF Mono', 'Fira Code', 'Courier New', Consolas, monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: var(--gray-800);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 120px;
+            overflow: hidden;
+        }
+        .server-chip {
+            display: inline-block;
+            padding: 6px 14px;
+            margin: 4px;
+            background: var(--gray-50);
+            border: 2px solid var(--gray-200);
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .server-chip.active { background: var(--primary-500); color: white; border-color: var(--primary-500); }
+        .server-chip:hover { transform: scale(1.05); }
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+            z-index: 9999; backdrop-filter: blur(3px);
+        }
+    </style>
+
+    <script>
+    let selectedServers = {{ selected_servers|tojson }};
+    let availableServersList = {{ available_servers|tojson }};
+    let currentPerPage = {{ per_page }};
+    let searchDebounceTimer = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('keyword').addEventListener('input', function() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(searchLogs, 300);
+        });
+    });
+
+    async function searchLogs() {
+        showLoading();
+        try {
+            const params = new URLSearchParams({
+                date: document.getElementById('date').value,
+                server_ips: selectedServers.join(','),
+                level: document.getElementById('level').value,
+                keyword: document.getElementById('keyword').value,
+                page: 1,
+                per_page: currentPerPage
+            });
+            const response = await fetch(`/log/api/search?${params.toString()}`, { signal: AbortSignal.timeout(30000) });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) { renderLogs(data.logs); renderPagination(data.pagination); updateStats(data.stats); updateTotalCount(data.total); ensureLogCardVisible(); }
+                else { showToast(data.message || '搜索失败', 'error'); }
+            } else { showToast('加载失败', 'error'); }
+        } catch (error) { showToast('请求超时: ' + error.message, 'error'); }
+        finally { hideLoading(); }
+    }
+
+    function ensureLogCardVisible() { const card = document.getElementById('log-card'); if (card) card.style.display = ''; }
+
+    async function loadPage(pageNum) {
+        showLoading();
+        try {
+            const params = new URLSearchParams({
+                page: pageNum, date: document.getElementById('date').value,
+                server_ips: selectedServers.join(','), level: document.getElementById('level').value,
+                keyword: document.getElementById('keyword').value, per_page: currentPerPage
+            });
+            const response = await fetch(`/log/api/search?${params.toString()}`, { signal: AbortSignal.timeout(30000) });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) { renderLogs(data.logs); renderPagination(data.pagination); updateStats(data.stats); updateTotalCount(data.total); }
+            } else { showToast('加载失败', 'error'); }
+        } catch (error) { showToast('请求超时: ' + error.message, 'error'); }
+        finally { hideLoading(); }
+    }
+
+    async function loadServers() {
+        const selectedDate = document.getElementById('date').value;
+        showLoading();
+        try {
+            const response = await fetch(`/log/api/servers/${selectedDate}`);
+            const data = await response.json();
+            if (data.success) { availableServersList = data.data; selectedServers = [...availableServersList]; renderServerChips(); await searchLogs(); }
+            else { showToast('加载服务器列表失败', 'error'); }
+        } catch (error) { showToast('请求超时: ' + error.message, 'error'); }
+        finally { hideLoading(); }
+    }
+
+    function renderServerChips() {
+        const container = document.getElementById('server-chips');
+        container.innerHTML = availableServersList.map(ip =>
+            `<div class="server-chip ${selectedServers.includes(ip) ? 'active' : ''}" onclick="toggleServer('${ip}')">${ip}</div>`
+        ).join('');
+    }
+
+    function toggleServer(serverIp) {
+        const index = selectedServers.indexOf(serverIp);
+        if (index > -1) selectedServers.splice(index, 1); else selectedServers.push(serverIp);
+        renderServerChips(); searchLogs();
+    }
+    function selectAllServers() { selectedServers = [...availableServersList]; renderServerChips(); searchLogs(); }
+    function clearServerSelection() { selectedServers = []; renderServerChips(); searchLogs(); }
+    function filterByLevel(level) { document.getElementById('level').value = level; searchLogs(); }
+    function clearAllFilters() { document.getElementById('level').value = ''; document.getElementById('keyword').value = ''; selectedServers = [...availableServersList]; renderServerChips(); searchLogs(); }
+    function clearKeyword() { document.getElementById('keyword').value = ''; searchLogs(); }
+    function changePerPage(perPage) { currentPerPage = parseInt(perPage); searchLogs(); }
+    function copyLog(rawText) { navigator.clipboard.writeText(rawText).then(() => showToast('已复制到剪贴板', 'success')).catch(() => showToast('复制失败', 'error')); }
+
+    function toggleExpand(element) {
+        if (element.style.maxHeight && element.style.maxHeight !== 'none') {
+            element.style.maxHeight = 'none'; element.style.overflow = 'visible';
+        } else {
+            element.style.maxHeight = '120px'; element.style.overflow = 'hidden';
+        }
+    }
+
+    function analyzeThisLog(rawText) {
+        window.open(`/log/analysis?log_content=${encodeURIComponent(rawText)}&analysis_type=error_detection`, '_blank');
+    }
+
+    function showLoading() { document.getElementById('loading').style.display = 'flex'; }
+    function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+
+    function showToast(message, type = 'info') {
+        const toastHtml = `<div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3" style="z-index:9999;min-width:280px;">
+            <div class="d-flex align-items-center"><i class="bi bi-${type==='success'?'check-circle':type==='error'?'x-circle':'info-circle'} me-2"></i>${message}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+        const el = document.createElement('div'); el.innerHTML = toastHtml; document.body.appendChild(el);
+        setTimeout(() => { const a = el.querySelector('.alert'); if (a) new bootstrap.Alert(a).close(); }, 3000);
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'k') { e.preventDefault(); document.getElementById('keyword').focus(); }
+    });
+
+    function renderLogs(logs) {
+        const container = document.getElementById('log-list-container');
+        if (!container) return;
+        if (logs.length === 0) {
+            container.innerHTML = '<div class="text-center py-5"><div class="empty-state"><div class="empty-icon"><i class="bi bi-inbox"></i></div><p class="empty-text">暂无日志数据</p><span class="empty-hint">请选择服务器并调整过滤条件</span></div></div>';
+            return;
+        }
+        const kw = document.getElementById('keyword').value;
+        const levelBadge = {
+            'error': 'severity-badge severity-error', 'warning': 'severity-badge severity-warning',
+            'critical': 'severity-badge severity-critical', 'info': 'severity-badge severity-info',
+            'debug': 'severity-badge severity-debug', 'unknown': 'severity-badge severity-unknown'
+        };
+        container.innerHTML = logs.map(log => {
+            const badgeClass = levelBadge[log.level] || 'severity-badge severity-info';
+            return `<div class="log-entry ${log.level}">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="log-timestamp"><i class="bi bi-clock me-1"></i>${log.timestamp}</div>
+                    <div>
+                        <span class="${badgeClass}">${log.level.toUpperCase()}</span>
+                        <span class="badge bg-light text-dark ms-2"><i class="bi bi-hdd-network me-1"></i>${escapeHtml(log.hostname)}</span>
+                    </div>
+                </div>
+                <div class="log-message" onclick="toggleExpand(this)">${highlightKeyword(escapeHtml(log.message), kw)}</div>
+                <div class="mt-2 d-flex align-items-center">
+                    <small class="text-muted"><i class="bi bi-gear me-1"></i>${escapeHtml(log.process)}</small>
+                    <button class="btn btn-sm btn-outline-primary ms-3 rounded-pill px-2" onclick="copyLog(this.dataset.raw)" data-raw="${escapeHtml(log.raw)}"><i class="bi bi-clipboard"></i></button>
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-2" onclick="analyzeThisLog(this.dataset.raw)" data-raw="${escapeHtml(log.raw)}"><i class="bi bi-robot"></i></button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function escapeHtml(text) { if (!text) return ''; const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+    function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function highlightKeyword(text, keyword) {
+        if (!keyword || !text) return text;
+        return text.replace(new RegExp(`(${escapeRegex(keyword)})`, 'gi'), '<mark style="background:var(--warning-50);color:var(--gray-800);padding:1px 3px;border-radius:3px;">$1</mark>');
+    }
+
+    function renderPagination(pagination) {
+        const container = document.getElementById('pagination-container');
+        if (!container) return;
+        if (!pagination || pagination.pages <= 1) { container.innerHTML = ''; return; }
+        let html = '<ul class="pagination justify-content-center mt-4">';
+        if (pagination.has_prev) html += `<li class="page-item"><a class="page-link" href="javascript:loadPage(${pagination.prev_num})"><i class="bi bi-chevron-left"></i></a></li>`;
+        pagination.pages_list.forEach(page => {
+            if (page === '...') html += `<li class="page-item disabled"><span class="page-link">&hellip;</span></li>`;
+            else html += `<li class="page-item ${page === pagination.page ? 'active' : ''}"><a class="page-link" href="javascript:loadPage(${page})">${page}</a></li>`;
+        });
+        if (pagination.has_next) html += `<li class="page-item"><a class="page-link" href="javascript:loadPage(${pagination.next_num})"><i class="bi bi-chevron-right"></i></a></li>`;
+        html += '</ul>'; container.innerHTML = html;
+    }
+
+    function updateStats(stats) {
+        if (!stats) return;
+        const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || 0; };
+        setEl('stat-total', stats.total_lines); setEl('stat-info', stats.by_level?.info); setEl('stat-warning', stats.by_level?.warning);
+        setEl('stat-error', stats.by_level?.error); setEl('stat-critical', stats.by_level?.critical); setEl('stat-debug', stats.by_level?.debug);
+    }
+
+    function updateTotalCount(total) {
+        const el = document.getElementById('total-count');
+        if (el) el.textContent = `${total} 条日志`;
+    }
+    </script>
+{% endblock %}

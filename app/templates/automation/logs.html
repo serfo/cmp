@@ -1,0 +1,860 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <style>
+        /* 日志表格样式优化 */
+        .log-table th {
+            vertical-align: middle;
+        }
+        
+        .log-table td {
+            vertical-align: top;
+        }
+        
+        /* 日志输出样式 */
+        .log-output {
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        /* 服务器列表样式 */
+        .server-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        /* 日志输出容器 */
+        .log-output-container {
+            margin-bottom: 5px;
+        }
+        
+        /* 搜索和过滤区域样式 */
+        #log-search {
+            max-width: 300px;
+        }
+        
+        /* 统计信息样式 */
+        .bg-light.rounded {
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+        
+        /* AI分析样式 */
+        .ai-analysis-container {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 0.75rem;
+            color: white;
+        }
+        
+        .ai-analysis-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .ai-analysis-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .ai-btn-analyze {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 0.5rem;
+            color: white;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .ai-btn-analyze:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .ai-btn-analyze:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .ai-loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+        }
+        
+        .ai-loading.show {
+            display: flex;
+        }
+        
+        .ai-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .ai-result {
+            display: none;
+        }
+        
+        .ai-result.show {
+            display: block;
+        }
+        
+        .ai-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            color: #212529;
+        }
+        
+        .ai-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .ai-summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .ai-summary-card {
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        
+        .ai-summary-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .ai-summary-label {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+        
+        .ai-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .ai-badge-success { background: #d4edda; color: #155724; }
+        .ai-badge-warning { background: #fff3cd; color: #856404; }
+        .ai-badge-danger { background: #f8d7da; color: #721c24; }
+        .ai-badge-info { background: #d1ecf1; color: #0c5460; }
+        
+        .ai-issue-item {
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #667eea;
+        }
+        
+        .ai-issue-item.high { border-left-color: #dc3545; }
+        .ai-issue-item.medium { border-left-color: #ffc107; }
+        .ai-issue-item.low { border-left-color: #28a745; }
+        
+        .ai-match-score {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #667eea;
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .ai-match-label {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        
+        .ai-optimization-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .ai-optimization-item:last-child {
+            border-bottom: none;
+        }
+        
+        .ai-conclusion {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        .ai-action-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 0.25rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* 单条日志分析按钮样式 */
+        .btn-ai-analyze {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 0.25rem;
+        }
+        
+        .btn-ai-analyze:hover {
+            color: white;
+            background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+        }
+        
+        /* 单条日志分析模态框样式 */
+        .ai-modal .modal-content {
+            border: none;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+        
+        .ai-modal .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        
+        .ai-modal .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+        
+        .ai-modal .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .ai-modal-section {
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .ai-modal-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .ai-match-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: conic-gradient(#667eea 0deg, #667eea var(--score), #e9ecef var(--score), #e9ecef 360deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+        
+        .ai-match-inner {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .ai-node-item {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: white;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #667eea;
+        }
+        
+        .ai-node-item.high { border-left-color: #dc3545; }
+        .ai-node-item.medium { border-left-color: #ffc107; }
+        .ai-node-item.low { border-left-color: #28a745; }
+        
+        .ai-suggestion-item {
+            padding: 0.75rem;
+            background: white;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .ai-suggestion-badge {
+            display: inline-block;
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            margin-right: 0.5rem;
+        }
+    </style>
+    
+    <!-- 单条日志分析模态框 -->
+    <div class="modal fade ai-modal" id="singleLogAnalysisModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-cpu me-2"></i>单条日志AI分析
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 加载状态 -->
+                    <div id="single-log-loading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">AI 正在分析单条日志...</p>
+                    </div>
+                    
+                    <!-- 分析结果 -->
+                    <div id="single-log-result" style="display: none;">
+                        <!-- 用户需求 -->
+                        <div id="single-log-user-intent" class="ai-modal-section">
+                            <div class="ai-modal-section-title">
+                                <i class="bi bi-chat-dots"></i>
+                                用户原始需求
+                            </div>
+                            <p class="mb-0 text-muted" id="single-log-intent-text"></p>
+                        </div>
+                        
+                        <!-- 需求匹配度 -->
+                        <div class="ai-modal-section">
+                            <div class="ai-modal-section-title">
+                                <i class="bi bi-check-circle"></i>
+                                需求匹配度分析
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 text-center">
+                                    <div class="ai-match-circle" id="single-log-match-circle" style="--score: 0deg;">
+                                        <div class="ai-match-inner" id="single-log-match-score">0</div>
+                                    </div>
+                                    <p class="text-muted mt-2 mb-0">匹配度评分</p>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <strong>用户需求：</strong>
+                                        <p class="text-muted mb-1" id="single-log-match-intent"></p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>实际结果：</strong>
+                                        <p class="text-muted mb-1" id="single-log-match-result"></p>
+                                    </div>
+                                    <div>
+                                        <strong>分析说明：</strong>
+                                        <p class="mb-0" id="single-log-match-analysis"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 关键节点 -->
+                        <div class="ai-modal-section">
+                            <div class="ai-modal-section-title">
+                                <i class="bi bi-lightning"></i>
+                                关键节点分析
+                            </div>
+                            <div id="single-log-key-nodes">
+                                <!-- 动态填充 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 执行总结 -->
+                        <div class="ai-modal-section">
+                            <div class="ai-modal-section-title">
+                                <i class="bi bi-journal-text"></i>
+                                执行总结
+                            </div>
+                            <div class="mb-3">
+                                <strong>整体情况：</strong>
+                                <p class="mb-1" id="single-log-summary-overall"></p>
+                            </div>
+                            <div class="mb-3">
+                                <strong>成功/失败原因：</strong>
+                                <p class="mb-1" id="single-log-summary-factor"></p>
+                            </div>
+                            <div>
+                                <strong>执行质量：</strong>
+                                <p class="mb-0" id="single-log-summary-quality"></p>
+                            </div>
+                        </div>
+                        
+                        <!-- 改进建议 -->
+                        <div class="ai-modal-section">
+                            <div class="ai-modal-section-title">
+                                <i class="bi bi-rocket"></i>
+                                改进建议
+                            </div>
+                            <div id="single-log-suggestions">
+                                <!-- 动态填充 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 原始响应（如果有） -->
+                        <div id="single-log-raw" style="display: none;">
+                            <hr>
+                            <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#singleLogRawContent">
+                                查看原始AI响应
+                            </button>
+                            <div class="collapse mt-2" id="singleLogRawContent">
+                                <pre class="bg-dark text-light p-3 rounded" style="white-space: pre-wrap;" id="single-log-raw-text"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row justify-content-between align-items-center mb-4">
+        <div class="col">
+            <h2 class="text-primary">任务日志 - {{ task.name }}</h2>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('automation.index') }}" class="btn btn-primary">返回任务列表</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">任务信息</h5>
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th>任务名称</th>
+                            <td>{{ task.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>任务类型</th>
+                            <td>
+                                {% if task.task_type == 'command' %}
+                                    <span class="badge bg-primary">命令</span>
+                                {% elif task.task_type == 'backup' %}
+                                    <span class="badge bg-info">备份</span>
+                                {% elif task.task_type == 'deploy' %}
+                                    <span class="badge bg-success">部署</span>
+                                {% elif task.task_type == 'monitor' %}
+                                    <span class="badge bg-warning">监控</span>
+                                {% elif task.task_type == 'other' %}
+                                    <span class="badge bg-secondary">其他</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>状态</th>
+                            <td>
+                                {% if task.status == 'pending' %}
+                                    <span class="badge bg-secondary">待执行</span>
+                                {% elif task.status == 'running' %}
+                                    <span class="badge bg-primary">运行中</span>
+                                {% elif task.status == 'completed' %}
+                                    <span class="badge bg-success">已完成</span>
+                                {% elif task.status == 'failed' %}
+                                    <span class="badge bg-danger">失败</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>定时表达式</th>
+                            <td>{{ task.cron_expression or '手动执行' }}</td>
+                        </tr>
+                        <tr>
+                            <th>执行命令</th>
+                            <td>{{ task.command }}</td>
+                        </tr>
+                        <tr>
+                            <th>用户原始需求</th>
+                            <td>
+                                {% if task.ai_prompt %}
+                                    <span class="text-primary">{{ task.ai_prompt }}</span>
+                                {% else %}
+                                    <span class="text-muted">无AI助手输入记录</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>目标服务器</th>
+                            <td>
+                                {% if task.target_servers %}
+                                    <div class="server-list" id="server-list"></div>
+                                    <script>
+                                        // 解析JSON格式的目标服务器列表
+                                        const targetServers = {{ task.target_servers | tojson }};
+                                        const serverList = document.getElementById('server-list');
+                                        
+                                        if (Array.isArray(targetServers) && targetServers.length > 0) {
+                                            targetServers.forEach(server => {
+                                                const badge = document.createElement('span');
+                                                badge.className = 'badge bg-primary mb-1 me-1';
+                                                badge.textContent = server;
+                                                serverList.appendChild(badge);
+                                            });
+                                        } else {
+                                            serverList.textContent = '- 无';
+                                        }
+                                    </script>
+                                {% else %}
+                                    - 无
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>超时时间</th>
+                            <td>{{ task.timeout }}秒</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h5 class="card-title mb-3">执行日志</h5>
+            <!-- 日志过滤和搜索 -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" id="log-search" class="form-control" placeholder="搜索日志内容...">
+                        <button class="btn btn-outline-secondary" type="button" id="search-btn">搜索</button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <select id="log-filter" class="form-select">
+                        <option value="all">全部状态</option>
+                        <option value="running">运行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="failed">失败</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- 日志表格 -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover log-table">
+                    <thead class="table-primary">
+                        <tr>
+                            <th style="width: 180px;">时间</th>
+                            <th style="width: 120px;">状态</th>
+                            <th style="width: 200px;">消息</th>
+                            <th>输出</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if logs %}
+                            {% for log in logs %}
+                                <tr data-status="{{ log.status }}">
+                                    <td class="text-nowrap">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>
+                                        {% if log.status == 'running' %}
+                                            <span class="badge bg-primary">运行中</span>
+                                        {% elif log.status == 'completed' %}
+                                            <span class="badge bg-success">已完成</span>
+                                        {% elif log.status == 'failed' %}
+                                            <span class="badge bg-danger">失败</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.message }}</td>
+                                    <td>
+                                        {% if log.output %}
+                                            <div class="log-output-container">
+                                                <button class="btn btn-sm btn-outline-primary mb-1 log-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#output-{{ log.id }}" aria-expanded="false" aria-controls="output-{{ log.id }}">
+                                                    <i class="bi bi-chevron-down"></i> 查看输出
+                                                </button>
+                                                <button class="btn btn-sm btn-ai-analyze mb-1 ms-1" type="button" onclick="analyzeSingleLog({{ log.id }})" data-bs-toggle="modal" data-bs-target="#singleLogAnalysisModal">
+                                                    <i class="bi bi-cpu"></i> AI分析
+                                                </button>
+                                                <div class="collapse" id="output-{{ log.id }}">
+                                                    <pre class="bg-dark text-light p-3 rounded log-output">{{ log.output }}</pre>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">- 无输出 -</span>
+                                            <button class="btn btn-sm btn-ai-analyze ms-2" type="button" onclick="analyzeSingleLog({{ log.id }})" data-bs-toggle="modal" data-bs-target="#singleLogAnalysisModal">
+                                                <i class="bi bi-cpu"></i> AI分析
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">暂无日志记录</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 添加日志统计信息 -->
+            <div class="mt-3 p-3 bg-light rounded">
+                <h6>日志统计</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <span class="badge bg-secondary">总日志数: {{ logs|length }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="badge bg-primary">运行中: {{ logs|selectattr('status', 'equalto', 'running')|list|length }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="badge bg-success">已完成: {{ logs|selectattr('status', 'equalto', 'completed')|list|length }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="badge bg-danger">失败: {{ logs|selectattr('status', 'equalto', 'failed')|list|length }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- JavaScript for log filtering and search -->
+            <script>
+                // 日志搜索功能
+                document.getElementById('search-btn').addEventListener('click', function() {
+                    const searchTerm = document.getElementById('log-search').value.toLowerCase();
+                    const rows = document.querySelectorAll('.log-table tbody tr');
+                    
+                    rows.forEach(row => {
+                        if (row.querySelector('td[colspan="4"]')) return; // 跳过空状态行
+                        
+                        const message = row.cells[2].textContent.toLowerCase();
+                        const output = row.querySelector('.log-output') ? row.querySelector('.log-output').textContent.toLowerCase() : '';
+                        
+                        if (message.includes(searchTerm) || output.includes(searchTerm)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
+                
+                // 回车键触发搜索
+                document.getElementById('log-search').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        document.getElementById('search-btn').click();
+                    }
+                });
+                
+                // 日志状态过滤
+                document.getElementById('log-filter').addEventListener('change', function() {
+                    const filter = this.value;
+                    const rows = document.querySelectorAll('.log-table tbody tr');
+                    
+                    rows.forEach(row => {
+                        if (row.querySelector('td[colspan="4"]')) return; // 跳过空状态行
+                        
+                        if (filter === 'all' || row.dataset.status === filter) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
+            </script>
+        </div>
+    </div>
+    
+    <script>
+    // 单条日志AI分析功能
+    function analyzeSingleLog(logId) {
+        const loading = document.getElementById('single-log-loading');
+        const result = document.getElementById('single-log-result');
+        
+        // 显示加载状态，隐藏结果
+        loading.style.display = 'block';
+        result.style.display = 'none';
+        
+        fetch(`/automation/api/ai/analyze-log/${logId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            loading.style.display = 'none';
+            
+            if (data.success) {
+                displaySingleLogAnalysis(data);
+            } else {
+                result.innerHTML = `
+                    <div class="ai-modal-section">
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            分析失败: ${data.message}
+                        </div>
+                    </div>
+                `;
+                result.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            loading.style.display = 'none';
+            result.innerHTML = `
+                <div class="ai-modal-section">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        分析请求失败: ${error.message}
+                    </div>
+                </div>
+            `;
+            result.style.display = 'block';
+        });
+    }
+    
+    function displaySingleLogAnalysis(data) {
+        const loading = document.getElementById('single-log-loading');
+        const result = document.getElementById('single-log-result');
+        const analysis = data.analysis;
+        const taskInfo = data.task_info;
+        const logInfo = data.log_info;
+        
+        // 显示结果区域
+        loading.style.display = 'none';
+        result.style.display = 'block';
+        
+        // 显示用户需求
+        const intentText = taskInfo && taskInfo.ai_prompt ? taskInfo.ai_prompt : '无AI助手输入记录';
+        document.getElementById('single-log-intent-text').textContent = intentText;
+        
+        // 需求匹配度分析
+        if (analysis.match_analysis) {
+            const score = analysis.match_analysis.match_score || 0;
+            const scoreDeg = (score / 100) * 360;
+            document.getElementById('single-log-match-circle').style.setProperty('--score', `${scoreDeg}deg`);
+            document.getElementById('single-log-match-score').textContent = score;
+            document.getElementById('single-log-match-intent').textContent = analysis.match_analysis.user_intent || intentText;
+            document.getElementById('single-log-match-result').textContent = analysis.match_analysis.actual_result || (logInfo.message || '无');
+            document.getElementById('single-log-match-analysis').textContent = analysis.match_analysis.analysis || '';
+        } else {
+            document.getElementById('single-log-match-score').textContent = '-';
+            document.getElementById('single-log-match-intent').textContent = taskInfo && taskInfo.ai_prompt ? taskInfo.ai_prompt : '无记录';
+            document.getElementById('single-log-match-result').textContent = logInfo.message || '无';
+            document.getElementById('single-log-match-analysis').textContent = 'AI未提供详细分析';
+        }
+        
+        // 关键节点分析
+        const keyNodesContainer = document.getElementById('single-log-key-nodes');
+        if (analysis.key_nodes && analysis.key_nodes.length > 0) {
+            keyNodesContainer.innerHTML = analysis.key_nodes.map(node => `
+                <div class="ai-node-item ${node.significance || 'low'}">
+                    <div class="flex-shrink-0 text-muted" style="min-width: 80px;">${node.time || '-'}</div>
+                    <div>
+                        <div class="fw-bold">${node.step || '-'}</div>
+                        <div class="small text-muted">${node.description || ''}</div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            keyNodesContainer.innerHTML = '<p class="text-muted mb-0">AI未识别到关键节点</p>';
+        }
+        
+        // 执行总结
+        if (analysis.summary) {
+            document.getElementById('single-log-summary-overall').textContent = analysis.summary.overall || '-';
+            document.getElementById('single-log-summary-factor').textContent = analysis.summary.success_factor || '-';
+            document.getElementById('single-log-summary-quality').textContent = analysis.summary.execution_quality || '-';
+        } else {
+            document.getElementById('single-log-summary-overall').textContent = 'AI未提供总结';
+            document.getElementById('single-log-summary-factor').textContent = '-';
+            document.getElementById('single-log-summary-quality').textContent = '-';
+        }
+        
+        // 改进建议
+        const suggestionsContainer = document.getElementById('single-log-suggestions');
+        if (analysis.suggestions && analysis.suggestions.length > 0) {
+            const typeColors = {
+                'optimization': '#667eea',
+                'error_prevention': '#dc3545',
+                'best_practice': '#28a745'
+            };
+            const typeNames = {
+                'optimization': '优化',
+                'error_prevention': '防错',
+                'best_practice': '最佳实践'
+            };
+            const priorityColors = {
+                'high': 'bg-danger',
+                'medium': 'bg-warning',
+                'low': 'bg-success'
+            };
+            
+            suggestionsContainer.innerHTML = analysis.suggestions.map(s => `
+                <div class="ai-suggestion-item">
+                    <span class="ai-suggestion-badge" style="background: ${typeColors[s.type] || '#6c757d'}; color: white;">
+                        ${typeNames[s.type] || s.type || '建议'}
+                    </span>
+                    <span class="badge ${priorityColors[s.priority] || 'bg-secondary'}">${s.priority || 'low'} 优先级</span>
+                    <p class="mb-0 mt-2">${s.suggestion || ''}</p>
+                </div>
+            `).join('');
+        } else {
+            suggestionsContainer.innerHTML = '<p class="text-muted mb-0">AI未提供改进建议</p>';
+        }
+        
+        // 原始响应
+        const rawContainer = document.getElementById('single-log-raw');
+        if (data.analysis_text) {
+            rawContainer.style.display = 'block';
+            document.getElementById('single-log-raw-text').textContent = data.analysis_text;
+        } else if (data.raw_response) {
+            rawContainer.style.display = 'block';
+            document.getElementById('single-log-raw-text').textContent = data.raw_response;
+        } else {
+            rawContainer.style.display = 'none';
+        }
+    }
+    </script>
+        </div>
+    </div>
+{% endblock %}

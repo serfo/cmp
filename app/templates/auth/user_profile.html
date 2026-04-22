@@ -1,0 +1,389 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="page-header fade-in">
+        <div class="page-header-content">
+            <div class="page-icon">
+                <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="page-header-text">
+                <h1 class="page-title">用户配置</h1>
+                <p class="page-subtitle">管理您的账户信息和安全设置</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="content-card advanced-card fade-in-up delay-1">
+                <div class="advanced-card-header">
+                    <div class="card-header-icon">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                    <h5 class="advanced-card-title">账户信息</h5>
+                </div>
+                <div class="advanced-card-body">
+                    <div class="profile-header">
+                        <div class="profile-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="profile-info">
+                            <h3>{{ current_user.username }}</h3>
+                            <span class="role-badge">
+                                {% if current_user.role == 'admin' %}
+                                    <i class="bi bi-shield-check me-1"></i><strong>管理员</strong>
+                                {% else %}
+                                    <i class="bi bi-person me-1"></i>普通用户
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="bi bi-envelope me-2"></i>邮箱地址
+                            </div>
+                            <div class="info-value">{{ current_user.email }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="bi bi-calendar3 me-2"></i>注册时间
+                            </div>
+                            <div class="info-value">{{ current_user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="bi bi-cpu me-2"></i>AI分析配额
+                            </div>
+                            <div class="info-value">
+                                <span class="quota-badge">
+                                    <i class="bi bi-lightning-charge me-1"></i>
+                                    {{ current_user.ai_quota }} 次
+                                </span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="bi bi-graph-up me-2"></i>已使用配额
+                            </div>
+                            <div class="info-value">
+                                <span class="usage-badge">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    {{ current_user.ai_used }} 次
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="content-card advanced-card fade-in-up delay-2">
+                <div class="advanced-card-header">
+                    <div class="card-header-icon" style="background: var(--warning-50); color: var(--warning-600);">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h5 class="advanced-card-title">安全设置</h5>
+                </div>
+                <div class="advanced-card-body">
+                    <div class="security-item">
+                        <div class="security-icon">
+                            <i class="bi bi-key-fill"></i>
+                        </div>
+                        <div class="security-info">
+                            <h6>密码</h6>
+                            <p>上次更新: 未知</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                            修改
+                        </button>
+                    </div>
+                    
+                    <div class="security-item">
+                        <div class="security-icon">
+                            <i class="bi bi-device-hdd-fill"></i>
+                        </div>
+                        <div class="security-info">
+                            <h6>登录设备</h6>
+                            <p>当前设备已授权</p>
+                        </div>
+                        <span class="badge bg-success">安全</span>
+                    </div>
+                    
+                    <div class="security-item">
+                        <div class="security-icon">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div class="security-info">
+                            <h6>登录历史</h6>
+                            <p>最近7天无异常</p>
+                        </div>
+                        <a href="#" class="btn btn-sm btn-outline-secondary">查看</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-card advanced-card fade-in-up delay-3 mt-4">
+                <div class="advanced-card-header">
+                    <div class="card-header-icon" style="background: var(--info-50); color: var(--primary-600);">
+                        <i class="bi bi-pie-chart"></i>
+                    </div>
+                    <h5 class="advanced-card-title">配额使用情况</h5>
+                </div>
+                <div class="advanced-card-body">
+                    {% set usage_percent = (current_user.ai_used / current_user.ai_quota * 100)|round|int if current_user.ai_quota > 0 else 0 %}
+                    <div class="quota-progress mb-3">
+                        <div class="progress-label d-flex justify-content-between mb-2">
+                            <span>AI分析使用量</span>
+                            <span class="fw-bold">{{ usage_percent }}%</span>
+                        </div>
+                        <div class="progress progress-modern">
+                            <div class="progress-bar {% if usage_percent < 60 %}bg-success{% elif usage_percent < 80 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ usage_percent }}%" 
+                                 aria-valuenow="{{ usage_percent }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="quota-stats">
+                        <div class="quota-stat">
+                            <span class="stat-number">{{ current_user.ai_quota - current_user.ai_used }}</span>
+                            <span class="stat-label">剩余次数</span>
+                        </div>
+                        <div class="quota-stat">
+                            <span class="stat-number">{{ current_user.ai_used }}</span>
+                            <span class="stat-label">已使用</span>
+                        </div>
+                        <div class="quota-stat">
+                            <span class="stat-number">{{ current_user.ai_quota }}</span>
+                            <span class="stat-label">总配额</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改密码模态框 -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-key me-2"></i>修改密码
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{{ url_for('auth.change_password') }}">
+                        <div class="form-group-modern">
+                            <label for="old_password" class="form-label-modern">
+                                <i class="bi bi-lock me-2"></i>原密码
+                            </label>
+                            <input type="password" class="form-control-modern" id="old_password" name="old_password" required 
+                                   placeholder="请输入原密码">
+                        </div>
+                        <div class="form-group-modern">
+                            <label for="new_password" class="form-label-modern">
+                                <i class="bi bi-lock-fill me-2"></i>新密码
+                            </label>
+                            <input type="password" class="form-control-modern" id="new_password" name="new_password" required 
+                                   placeholder="请输入新密码（至少6位）" minlength="6">
+                        </div>
+                        <div class="form-group-modern">
+                            <label for="confirm_password" class="form-label-modern">
+                                <i class="bi bi-check-circle me-2"></i>确认新密码
+                            </label>
+                            <input type="password" class="form-control-modern" id="confirm_password" name="confirm_password" required 
+                                   placeholder="请再次输入新密码">
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            密码长度至少6位，建议包含字母和数字
+                        </div>
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-2"></i>确认修改
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary-100), var(--primary-200));
+            color: var(--primary-600);
+            font-size: 2.5rem;
+            border-radius: var(--radius-lg);
+        }
+        
+        .profile-info h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin: 0 0 0.5rem;
+        }
+        
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.375rem 0.75rem;
+            background: var(--primary-50);
+            color: var(--primary-600);
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        
+        .info-item {
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: var(--radius);
+        }
+        
+        .info-label {
+            display: flex;
+            align-items: center;
+            font-size: 0.8125rem;
+            color: var(--gray-500);
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--gray-900);
+        }
+        
+        .quota-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            background: var(--primary-50);
+            color: var(--primary-600);
+            border-radius: var(--radius-full);
+            font-weight: 600;
+        }
+        
+        .usage-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            background: var(--success-50);
+            color: var(--success-600);
+            border-radius: var(--radius-full);
+            font-weight: 600;
+        }
+        
+        .security-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            margin-bottom: 0.75rem;
+        }
+        
+        .security-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .security-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-100);
+            color: var(--gray-600);
+            border-radius: var(--radius);
+        }
+        
+        .security-info {
+            flex: 1;
+        }
+        
+        .security-info h6 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin: 0 0 0.25rem;
+        }
+        
+        .security-info p {
+            font-size: 0.8125rem;
+            color: var(--gray-500);
+            margin: 0;
+        }
+        
+        .quota-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+        }
+        
+        .quota-stat {
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: var(--radius);
+        }
+        
+        .quota-stat .stat-number {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .quota-stat .stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+        
+        @media (max-width: 768px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .quota-stats {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+{% endblock %}

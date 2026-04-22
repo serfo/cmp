@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <section class="hero-section">
+        <div class="hero-background">
+            <div class="hero-grid"></div>
+            <div class="hero-shape shape-1"></div>
+            <div class="hero-shape shape-2"></div>
+            <div class="hero-shape shape-3"></div>
+            <div class="hero-glow"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge fade-in-down">
+                    <span class="badge-icon"><i class="bi bi-lightning-charge-fill"></i></span>
+                    <span>新一代云端管理平台</span>
+                </div>
+                <h1 class="hero-title fade-in-up delay-1">
+                    智能云管平台
+                    <span class="title-highlight">
+                        <span class="highlight-word" style="--index: 0">赋能</span>
+                        <span class="highlight-word" style="--index: 1">运维</span>
+                        <span class="highlight-word" style="--index: 2">提效</span>
+                    </span>
+                </h1>
+                <p class="hero-subtitle fade-in-up delay-2">
+                    一站式服务器管理、实时监控与自动化运维解决方案
+                    <br>
+                    <span class="subtitle-highlight">让云端管理更简单、更高效、更智能</span>
+                </p>
+                {% if not current_user.is_authenticated %}
+                    <div class="hero-actions fade-in-up delay-3">
+                        <a class="btn btn-primary btn-lg hero-btn-primary ripple-btn" href="{{ url_for('auth.login') }}" role="button">
+                            <i class="bi bi-rocket-takeoff me-2"></i>开始使用
+                        </a>
+                        <a class="btn btn-outline-light btn-lg hero-btn-secondary" href="{{ url_for('auth.register') }}" role="button">
+                            <i class="bi bi-person-plus me-2"></i>免费注册
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="hero-welcome fade-in-up delay-3">
+                        <div class="welcome-icon pulse">
+                            <i class="bi bi-emoji-smile-fill"></i>
+                        </div>
+                        <div class="welcome-text">
+                            <span class="welcome-label">欢迎回来</span>
+                            <span class="welcome-name">{{ current_user.username }}</span>
+                        </div>
+                        <a class="btn btn-light btn-lg hero-btn-dashboard" href="{{ url_for('server.index') }}">
+                            <i class="bi bi-speedometer2 me-2"></i>进入控制台
+                        </a>
+                    </div>
+                {% endif %}
+                <div class="hero-stats fade-in-up delay-4">
+                    <div class="stat-item">
+                        <div class="stat-icon-wrapper">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <span class="stat-number" data-count="99.9">0</span>
+                        <span class="stat-label">可用性保障</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <div class="stat-icon-wrapper">
+                            <i class="bi bi-hdd-network"></i>
+                        </div>
+                        <span class="stat-number" data-count="500">0</span>
+                        <span class="stat-label">已管理服务器</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <div class="stat-icon-wrapper">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <span class="stat-number" data-count="24">0</span>
+                        <span class="stat-label">全天候监控</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <div class="mouse">
+                <div class="wheel"></div>
+            </div>
+            <span>向下滚动</span>
+        </div>
+    </section>
+
+    <section class="features-section" id="features">
+        <div class="container">
+            <div class="section-header scroll-reveal">
+                <span class="section-badge">核心功能</span>
+                <h2 class="section-title">全方位云端管理解决方案</h2>
+                <p class="section-subtitle">从监控到自动化，一站式解决所有运维需求</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card scroll-reveal delay-1">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon bg-primary-subtle">
+                            <i class="bi bi-server"></i>
+                        </div>
+                        <div class="feature-glow"></div>
+                    </div>
+                    <h3 class="feature-title">服务器管理</h3>
+                    <p class="feature-description">轻松管理所有服务器资源，支持添加、编辑、删除服务器，实时查看服务器状态与性能指标。</p>
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('server.index') }}" class="feature-link">
+                            立即体验 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="feature-link">
+                            登录查看 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="feature-card scroll-reveal delay-2">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon bg-success-subtle">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <div class="feature-glow"></div>
+                    </div>
+                    <h3 class="feature-title">实时监控</h3>
+                    <p class="feature-description">实时监控服务器性能指标，包括CPU、内存、磁盘、网络等，可视化展示监控数据与趋势分析。</p>
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('monitor.index') }}" class="feature-link">
+                            立即体验 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="feature-link">
+                            登录查看 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="feature-card scroll-reveal delay-3">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon bg-info-subtle">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="feature-glow"></div>
+                    </div>
+                    <h3 class="feature-title">自动化运维</h3>
+                    <p class="feature-description">通过Ansible实现批量部署与配置管理，提高运维效率，减少人为错误，支持定时任务调度。</p>
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('automation.index') }}" class="feature-link">
+                            立即体验 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="feature-link">
+                            登录查看 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="feature-card scroll-reveal delay-4">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon bg-warning-subtle">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <div class="feature-glow"></div>
+                    </div>
+                    <h3 class="feature-title">智能告警</h3>
+                    <p class="feature-description">集中管理系统告警信息，支持自定义告警规则，多渠道实时通知运维人员，快速响应异常。</p>
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('monitor.alerts') }}" class="feature-link">
+                            立即体验 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="feature-link">
+                            登录查看 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="feature-card scroll-reveal delay-5">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon bg-danger-subtle">
+                            <i class="bi bi-file-earmark-text-fill"></i>
+                        </div>
+                        <div class="feature-glow"></div>
+                    </div>
+                    <h3 class="feature-title">日志分析</h3>
+                    <p class="feature-description">多维度日志检索与分析，支持日志可视化，快速定位系统问题，支持日志告警与异常检测。</p>
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('log.index') }}" class="feature-link">
+                            立即体验 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="feature-link">
+                            登录查看 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="feature-card scroll-reveal delay-6">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon bg-purple-subtle">
+                            <i class="bi bi-cpu"></i>
+                        </div>
+                        <div class="feature-glow"></div>
+                    </div>
+                    <h3 class="feature-title">AI智能分析</h3>
+                    <p class="feature-description">接入大模型实现日志和服务器配置的智能诊断，自动生成优化建议，预测潜在风险与故障。</p>
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('log.analysis') }}" class="feature-link">
+                            立即体验 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="feature-link">
+                            登录查看 <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="benefits-section scroll-reveal">
+        <div class="container">
+            <div class="benefits-grid">
+                <div class="benefit-content">
+                    <span class="section-badge">为什么选择我们</span>
+                    <h2 class="section-title">智能化运维，从这里开始</h2>
+                    <div class="benefits-list">
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="bi bi-lightning-charge-fill"></i>
+                            </div>
+                            <div class="benefit-text">
+                                <h4>极速响应</h4>
+                                <p>毫秒级监控采集，实时告警通知</p>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
+                            <div class="benefit-text">
+                                <h4>安全可靠</h4>
+                                <p>企业级安全防护，数据多重备份</p>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="bi bi-graph-up-arrow"></i>
+                            </div>
+                            <div class="benefit-text">
+                                <h4>效率提升</h4>
+                                <p>自动化运维，一键批量部署</p>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="bi bi-cpu"></i>
+                            </div>
+                            <div class="benefit-text">
+                                <h4>AI赋能</h4>
+                                <p>智能诊断分析，预测潜在风险</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="benefit-visual">
+                    <div class="visual-card">
+                        <div class="visual-header">
+                            <span class="visual-dot"></span>
+                            <span class="visual-dot"></span>
+                            <span class="visual-dot"></span>
+                        </div>
+                        <div class="visual-content">
+                            <div class="monitor-screen">
+                                <div class="screen-header">
+                                    <div class="server-status">
+                                        <span class="status-indicator online">
+                                            <span class="status-dot pulse"></span>
+                                            Server-01 在线
+                                        </span>
+                                    </div>
+                                    <div class="server-metrics">
+                                        <div class="metric">
+                                            <span class="metric-label">CPU</span>
+                                            <div class="metric-bar">
+                                                <div class="metric-fill" style="width: 45%"></div>
+                                            </div>
+                                            <span class="metric-value">45%</span>
+                                        </div>
+                                        <div class="metric">
+                                            <span class="metric-label">内存</span>
+                                            <div class="metric-bar">
+                                                <div class="metric-fill" style="width: 62%"></div>
+                                            </div>
+                                            <span class="metric-value">62%</span>
+                                        </div>
+                                        <div class="metric">
+                                            <span class="metric-label">磁盘</span>
+                                            <div class="metric-bar">
+                                                <div class="metric-fill" style="width: 38%"></div>
+                                            </div>
+                                            <span class="metric-value">38%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="testimonials-section scroll-reveal">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">客户评价</span>
+                <h2 class="section-title">来自运维团队的信赖</h2>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <div class="quote-icon">
+                            <i class="bi bi-quote"></i>
+                        </div>
+                        <p>"云管平台大大提升了我们的运维效率，从原来需要3小时的工作缩短到30分钟。"</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="author-info">
+                            <span class="author-name">张运维</span>
+                            <span class="author-title">某互联网公司 技术总监</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <div class="quote-icon">
+                            <i class="bi bi-quote"></i>
+                        </div>
+                        <p>"AI智能分析功能非常强大，帮我们提前发现了很多潜在问题，避免了多次事故。"</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="author-info">
+                            <span class="author-name">李DevOps</span>
+                            <span class="author-title">某金融公司 运维经理</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <div class="quote-icon">
+                            <i class="bi bi-quote"></i>
+                        </div>
+                        <p>"界面美观，操作流畅，文档详细，上手非常快，团队很快就适应了。"</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="author-info">
+                            <span class="author-name">王系统</span>
+                            <span class="author-title">某电商公司 架构师</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-card">
+                <div class="cta-background"></div>
+                <div class="cta-content">
+                    <div class="cta-icon">
+                        <i class="bi bi-rocket-takeoff"></i>
+                    </div>
+                    <div class="cta-text">
+                        <h3>准备好开始了吗？</h3>
+                        <p>立即体验新一代云管平台，让运维工作更简单、更高效</p>
+                    </div>
+                    <div class="cta-actions">
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg ripple-btn">
+                            <i class="bi bi-person-plus me-2"></i>免费注册
+                        </a>
+                        <a href="#" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-info-circle me-2"></i>了解更多
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 数字递增动画
+            const statNumbers = document.querySelectorAll('.stat-number[data-count]');
+            statNumbers.forEach(stat => {
+                const target = parseFloat(stat.dataset.count);
+                const isDecimal = target % 1 !== 0;
+                const duration = 2000;
+                const start = performance.now();
+                
+                function update(currentTime) {
+                    const elapsed = currentTime - start;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    const current = target * easeOut;
+                    
+                    stat.textContent = isDecimal ? current.toFixed(1) : Math.floor(current);
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    }
+                }
+                
+                const observer = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting) {
+                        requestAnimationFrame(update);
+                        observer.disconnect();
+                    }
+                }, { threshold: 0.5 });
+                
+                observer.observe(stat);
+            });
+            
+            // 滚动动画
+            const scrollElements = document.querySelectorAll('.scroll-reveal');
+            const scrollObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('revealed');
+                        scrollObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+            
+            scrollElements.forEach(el => scrollObserver.observe(el));
+            
+            // 鼠标移动视差效果
+            const heroSection = document.querySelector('.hero-section');
+            const shapes = document.querySelectorAll('.hero-shape');
+            
+            document.addEventListener('mousemove', (e) => {
+                const x = (window.innerWidth - e.pageX * 2) / 100;
+                const y = (window.innerHeight - e.pageY * 2) / 100;
+                
+                shapes.forEach((shape, index) => {
+                    const speed = (index + 1) * 0.5;
+                    shape.style.transform = `translate(${x * speed}px, ${y * speed}px)`;
+                });
+            });
+            
+            // 滚动指示器点击
+            const scrollIndicator = document.querySelector('.scroll-indicator');
+            if (scrollIndicator) {
+                scrollIndicator.addEventListener('click', () => {
+                    document.querySelector('.features-section').scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            }
+        });
+    </script>
+{% endblock %}

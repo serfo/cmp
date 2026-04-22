@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4>编辑自动化任务</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('automation.edit', id=task.id) }}">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">任务名称</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ task.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="task_type" class="form-label">任务类型</label>
+                            <select class="form-select" id="task_type" name="task_type" required>
+                                <option value="command" {% if task.task_type == 'command' %}selected{% endif %}>命令</option>
+                                <option value="backup" {% if task.task_type == 'backup' %}selected{% endif %}>备份</option>
+                                <option value="deploy" {% if task.task_type == 'deploy' %}selected{% endif %}>部署</option>
+                                <option value="monitor" {% if task.task_type == 'monitor' %}selected{% endif %}>监控</option>
+                                <option value="other" {% if task.task_type == 'other' %}selected{% endif %}>其他</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cron_expression" class="form-label">定时表达式（留空则手动执行）</label>
+                            <input type="text" class="form-control" id="cron_expression" name="cron_expression" value="{{ task.cron_expression }}" placeholder="例如：0 0 * * *">
+                        </div>
+                        <div class="mb-3">
+                            <label for="command" class="form-label">执行命令</label>
+                            <textarea class="form-control" id="command" name="command" rows="3" required>{{ task.command }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="target_servers" class="form-label">目标服务器（多选）</label>
+                            <div class="overflow-auto" style="max-height: 200px; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 0.5rem;">
+                                {% for server in servers %}
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input" type="checkbox" value="{{ server.ip }}" id="server-{{ server.id }}" name="target_servers" {% if server.ip in selected_servers %}checked{% endif %}>
+                                        <label class="form-check-label" for="server-{{ server.id }}">
+                                            {{ server.name }} ({{ server.ip }}:{{ server.port }})
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="timeout" class="form-label">超时时间（秒，默认3600秒）</label>
+                            <input type="number" class="form-control" id="timeout" name="timeout" value="{{ task.timeout }}" min="1">
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('automation.index') }}" class="btn btn-secondary">取消</a>
+                            <button type="submit" class="btn btn-primary">更新任务</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

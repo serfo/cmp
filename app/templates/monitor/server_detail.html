@@ -1,0 +1,747 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <!-- 页面头部 -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-icon">
+                <i class="bi bi-hdd-stack-fill"></i>
+            </div>
+            <div class="page-header-text">
+                <h1 class="page-title">{{ server.name }}</h1>
+                <p class="page-subtitle">{{ server.ip }} — 服务器详细监控信息</p>
+            </div>
+        </div>
+        <div class="page-header-actions">
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal">
+                <i class="bi bi-robot me-2"></i>AI分析
+            </button>
+            <a href="{{ url_for('monitor.index') }}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left me-2"></i>返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- AI分析模态框 -->
+    <div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="aiAnalysisModalLabel"><i class="bi bi-robot me-2"></i>AI分析选项</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="aiAnalysisForm">
+                        <h6 class="mb-3">请选择要分析的内容：</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="basic_info" id="basicInfo" checked>
+                                    <label class="form-check-label" for="basicInfo">基本信息</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="cpu_memory_network" id="cpuMemoryNetwork" checked>
+                                    <label class="form-check-label" for="cpuMemoryNetwork">CPU/内存/网络</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="load_rate" id="loadRate" checked>
+                                    <label class="form-check-label" for="loadRate">负载率</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="system_details" id="systemDetails" checked>
+                                    <label class="form-check-label" for="systemDetails">系统详细信息</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="alerts" id="alerts" checked>
+                                    <label class="form-check-label" for="alerts">服务器告警</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 时间范围选择 -->
+                        <div class="mb-3">
+                            <label for="alertTimeRange" class="form-label fw-semibold">告警时间范围：</label>
+                            <select class="form-select" id="alertTimeRange" onchange="filterAlertsByTimeRange()">
+                                <option value="">请选择告警</option>
+                                <option value="5m">最近5分钟</option>
+                                <option value="15m">最近15分钟</option>
+                                <option value="30m">最近30分钟</option>
+                                <option value="1h">最近1小时</option>
+                                <option value="3h">最近3小时</option>
+                                <option value="6h">最近6小时</option>
+                                <option value="24h">最近24小时</option>
+                                <option value="all">全部告警</option>
+                            </select>
+                        </div>
+
+                        <!-- 告警选择部分 -->
+                        <div class="mb-3" id="alertsSelection">
+                            <h6 class="fw-semibold">选择要分析的告警（最多100条）：</h6>
+                            <div class="overflow-auto border rounded p-2" style="max-height: 200px;">
+                                {% if alerts and alerts|length > 0 %}
+                                    {% for alert in alerts %}
+                                        <div class="form-check {% if loop.index0 > 0 %}mt-1{% endif %}">
+                                            <input class="form-check-input alert-checkbox" type="checkbox" value="{{ loop.index0 }}" data-alert-time="{{ alert.created_at.timestamp() }}" id="alert{{ loop.index0 }}">
+                                            <label class="form-check-label d-flex align-items-center" for="alert{{ loop.index0 }}">
+                                                <span class="badge bg-danger-subtle text-danger me-1"><i class="bi bi-exclamation-circle"></i></span>
+                                                <small>{{ alert.created_at.strftime('%Y-%m-%d %H:%M') }} — {{ alert.message[:60] }}{% if alert.message|length > 60 %}...{% endif %}</small>
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted small mb-0">暂无告警记录</p>
+                                {% endif %}
+                            </div>
+                            <small id="alertCount" class="text-muted mt-1">已选择 <span id="selectedAlertCount">0</span> 条告警</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="analysisType" class="form-label fw-semibold">分析类型：</label>
+                            <select class="form-select" id="analysisType">
+                                <option value="summary">生成摘要</option>
+                                <option value="suggestion">生成建议</option>
+                                <option value="troubleshoot">故障排查</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-success" onclick="performAiAnalysis()">
+                        <i class="bi bi-play-circle me-1"></i>开始分析
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI分析结果区域 -->
+    <div id="aiAnalysisResult" class="content-card mb-4" style="display: none;">
+        <div class="content-card-header">
+            <div class="card-header-icon" style="background: var(--success-100); color: var(--success-600);">
+                <i class="bi bi-robot"></i>
+            </div>
+            <h5 class="content-card-title">AI分析结果</h5>
+            <div class="card-header-actions">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="hideAiAnalysisResult()">
+                    <i class="bi bi-x me-1"></i>关闭
+                </button>
+            </div>
+        </div>
+        <div class="content-card-body">
+            <div id="aiAnalysisLoading" style="display: none; text-align: center; padding: 30px;">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-3 text-muted">AI正在分析数据，请稍候...</p>
+            </div>
+            <div id="aiAnalysisContent" class="ai-result-content"></div>
+        </div>
+    </div>
+
+    <!-- 服务器基本信息 -->
+    <div class="content-card">
+        <div class="content-card-header">
+            <div class="card-header-icon">
+                <i class="bi bi-info-circle-fill"></i>
+            </div>
+            <h5 class="content-card-title">基本信息</h5>
+        </div>
+        <div class="content-card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless info-table">
+                        <tr>
+                            <td class="info-label"><i class="bi bi-hdd-network me-2"></i>服务器名称</td>
+                            <td class="info-value">{{ server.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-globe me-2"></i>IP地址</td>
+                            <td class="info-value">{{ server.ip }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-plug me-2"></i>端口</td>
+                            <td class="info-value">{{ server.port }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-window me-2"></i>操作系统</td>
+                            <td class="info-value">{{ server.os or '未知' }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-borderless info-table">
+                        <tr>
+                            <td class="info-label"><i class="bi bi-cpu me-2"></i>CPU核心</td>
+                            <td class="info-value">{{ server.cpu or '未知' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-memory me-2"></i>内存</td>
+                            <td class="info-value">{{ server.memory or '未知' }} GB</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-hard-drive me-2"></i>磁盘</td>
+                            <td class="info-value">{{ server.disk or '未知' }} GB</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-activity me-2"></i>Zabbix状态</td>
+                            <td class="info-value">
+                                {% if server.zabbix_hostid %}
+                                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>已监控</span>
+                                {% else %}
+                                    <span class="badge bg-warning-subtle text-warning"><i class="bi bi-exclamation-circle me-1"></i>未监控</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 监控指标统计卡片 -->
+    <div class="stats-grid">
+        <div class="stat-card {% if monitoring_data.cpu_usage < 60 %}stat-success{% elif monitoring_data.cpu_usage < 80 %}stat-warning{% else %}stat-danger{% endif %}">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-cpu-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ monitoring_data.cpu_usage }}%</span>
+                    <span class="stat-label">CPU使用率</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card {% if monitoring_data.memory_usage < 60 %}stat-success{% elif monitoring_data.memory_usage < 80 %}stat-warning{% else %}stat-danger{% endif %}">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-memory"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ monitoring_data.memory_usage }}%</span>
+                    <span class="stat-label">内存使用率</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card {% if monitoring_data.disk_usage < 60 %}stat-success{% elif monitoring_data.disk_usage < 80 %}stat-warning{% else %}stat-danger{% endif %}">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-hard-drive-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ monitoring_data.disk_usage }}%</span>
+                    <span class="stat-label">磁盘使用率</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card stat-info">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-arrow-down-up"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">
+                        {% if monitoring_data.load_average_1m >= 10 %}{{ monitoring_data.load_average_1m }}{% else %}{{ monitoring_data.load_average_1m }}{% endif %}
+                    </span>
+                    <span class="stat-label">系统负载(1m)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 网络流量 -->
+    <div class="stats-grid">
+        <div class="stat-card stat-success">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-arrow-down-circle-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">
+                        {% if monitoring_data.network_in >= 1024 * 1024 %}
+                            {{ (monitoring_data.network_in / 1024 / 1024)|round(2) }} MB/s
+                        {% elif monitoring_data.network_in >= 1024 %}
+                            {{ (monitoring_data.network_in / 1024)|round(2) }} KB/s
+                        {% else %}
+                            {{ monitoring_data.network_in|round(2) }} B/s
+                        {% endif %}
+                    </span>
+                    <span class="stat-label">网络入流量</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card stat-info">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-arrow-up-circle-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">
+                        {% if monitoring_data.network_out >= 1024 * 1024 %}
+                            {{ (monitoring_data.network_out / 1024 / 1024)|round(2) }} MB/s
+                        {% elif monitoring_data.network_out >= 1024 %}
+                            {{ (monitoring_data.network_out / 1024)|round(2) }} KB/s
+                        {% else %}
+                            {{ monitoring_data.network_out|round(2) }} B/s
+                        {% endif %}
+                    </span>
+                    <span class="stat-label">网络出流量</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card {% if monitoring_data.uptime > 86400 %}stat-success{% else %}stat-info{% endif %}">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-clock-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">
+                        {% set days = monitoring_data.uptime // 86400 %}
+                        {% set hours = (monitoring_data.uptime % 86400) // 3600 %}
+                        {{ days }}天{{ hours }}时
+                    </span>
+                    <span class="stat-label">运行时间</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card stat-info">
+            <div class="stat-card-bg"></div>
+            <div class="stat-card-content">
+                <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ monitoring_data.num_processes }}</span>
+                    <span class="stat-label">进程数</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系统详细信息 -->
+    <div class="content-card">
+        <div class="content-card-header">
+            <div class="card-header-icon">
+                <i class="bi bi-list-check"></i>
+            </div>
+            <h5 class="content-card-title">系统详细信息</h5>
+        </div>
+        <div class="content-card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless info-table">
+                        <tr>
+                            <td class="info-label"><i class="bi bi-cpu me-2"></i>CPU核心数</td>
+                            <td class="info-value">{{ monitoring_data.cpu_cores }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-clock me-2"></i>运行时间</td>
+                            <td class="info-value">
+                                {% set days = monitoring_data.uptime // 86400 %}
+                                {% set hours = (monitoring_data.uptime % 86400) // 3600 %}
+                                {% set minutes = (monitoring_data.uptime % 3600) // 60 %}
+                                {{ days }}天 {{ hours }}小时 {{ minutes }}分钟
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-app-indicator me-2"></i>进程数量</td>
+                            <td class="info-value">{{ monitoring_data.num_processes }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-people me-2"></i>登录用户数</td>
+                            <td class="info-value">{{ monitoring_data.logged_in_users }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-borderless info-table">
+                        <tr>
+                            <td class="info-label"><i class="bi bi-memory me-2"></i>总内存</td>
+                            <td class="info-value">
+                                {% if monitoring_data.total_memory >= 1024 * 1024 * 1024 %}
+                                    {{ (monitoring_data.total_memory / 1024 / 1024 / 1024)|round(2) }} GB
+                                {% else %}
+                                    {{ (monitoring_data.total_memory / 1024 / 1024)|round(2) }} MB
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-speedometer2 me-2"></i>可用内存</td>
+                            <td class="info-value">
+                                {% if monitoring_data.available_memory >= 1024 * 1024 * 1024 %}
+                                    {{ (monitoring_data.available_memory / 1024 / 1024 / 1024)|round(2) }} GB
+                                {% else %}
+                                    {{ (monitoring_data.available_memory / 1024 / 1024)|round(2) }} MB
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-arrow-left-right me-2"></i>总交换空间</td>
+                            <td class="info-value">
+                                {% if monitoring_data.total_swap >= 1024 * 1024 * 1024 %}
+                                    {{ (monitoring_data.total_swap / 1024 / 1024 / 1024)|round(2) }} GB
+                                {% else %}
+                                    {{ (monitoring_data.total_swap / 1024 / 1024)|round(2) }} MB
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="info-label"><i class="bi bi-arrow-left-right me-2"></i>可用交换空间</td>
+                            <td class="info-value">
+                                {% if monitoring_data.free_swap >= 1024 * 1024 * 1024 %}
+                                    {{ (monitoring_data.free_swap / 1024 / 1024 / 1024)|round(2) }} GB
+                                {% else %}
+                                    {{ (monitoring_data.free_swap / 1024 / 1024)|round(2) }} MB
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 监控图表 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="content-card">
+                <div class="content-card-header">
+                    <div class="card-header-icon">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <h5 class="content-card-title">CPU使用率趋势</h5>
+                </div>
+                <div class="content-card-body">
+                    <div id="cpu-chart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="content-card">
+                <div class="content-card-header">
+                    <div class="card-header-icon">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h5 class="content-card-title">内存使用率趋势</h5>
+                </div>
+                <div class="content-card-body">
+                    <div id="memory-chart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 服务器告警 -->
+    <div class="content-card">
+        <div class="content-card-header">
+            <div class="card-header-icon" style="background: var(--danger-100); color: var(--danger-600);">
+                <i class="bi bi-bell-fill"></i>
+            </div>
+            <h5 class="content-card-title">服务器告警</h5>
+            <div class="card-header-actions">
+                <span class="badge {% if alerts %}bg-danger-subtle text-danger{% else %}bg-success-subtle text-success{% endif %}">
+                    {% if alerts %}
+                        <i class="bi bi-exclamation-circle me-1"></i>{{ alerts|length }} 条告警
+                    {% else %}
+                        <i class="bi bi-check-circle me-1"></i>无告警
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="content-card-body">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-clock me-2"></i>时间</th>
+                            <th><i class="bi bi-tag-fill me-2"></i>类型</th>
+                            <th><i class="bi bi-exclamation-triangle me-2"></i>级别</th>
+                            <th><i class="bi bi-chat-text me-2"></i>内容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if alerts and alerts|length > 0 %}
+                            {% for alert in alerts %}
+                                <tr class="alert-active">
+                                    <td>{{ alert.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>
+                                        {% if alert.alert_type == 'zabbix' %}
+                                            <span class="badge bg-primary-subtle text-primary">
+                                                <i class="bi bi-activity me-1"></i>Zabbix 监控
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary-subtle text-secondary">
+                                                <i class="bi bi-tag me-1"></i>{{ alert.alert_type }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if alert.severity == 'critical' %}
+                                            <span class="severity-badge severity-critical"><i class="bi bi-exclamation-diamond me-1"></i>严重</span>
+                                        {% elif alert.severity == 'error' %}
+                                            <span class="severity-badge severity-error"><i class="bi bi-x-circle me-1"></i>错误</span>
+                                        {% elif alert.severity == 'warning' %}
+                                            <span class="severity-badge severity-warning"><i class="bi bi-exclamation-triangle me-1"></i>警告</span>
+                                        {% else %}
+                                            <span class="severity-badge severity-info"><i class="bi bi-info-circle me-1"></i>信息</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ alert.message }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="empty-state">
+                                        <div class="empty-icon"><i class="bi bi-bell-slash"></i></div>
+                                        <p class="empty-text">暂无活跃告警</p>
+                                        <span class="empty-hint">系统运行正常</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .info-table .info-label {
+            width: 140px;
+            font-weight: 600;
+            color: var(--gray-600);
+            padding: 0.5rem 0;
+            font-size: 0.9375rem;
+        }
+        .info-table .info-value {
+            color: var(--gray-800);
+            padding: 0.5rem 0;
+            font-size: 0.9375rem;
+        }
+        .ai-result-content {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--gray-800);
+        }
+        .ai-result-content h2 {
+            font-size: 1.4em;
+            border-bottom: 1px solid var(--gray-200);
+            padding-bottom: 0.3em;
+            margin-top: 1em;
+            font-weight: 600;
+        }
+        .ai-result-content h3 {
+            font-size: 1.2em;
+            margin-top: 0.8em;
+            font-weight: 600;
+        }
+        .ai-result-content ul {
+            padding-left: 2em;
+        }
+    </style>
+
+    <script>
+        // ECharts初始化
+        if (typeof echarts === 'undefined') {
+            console.error('ECharts库未加载');
+        }
+
+        var historyData = {
+            cpu_history: {{ history_data.cpu_history|tojson }},
+            memory_history: {{ history_data.memory_history|tojson }},
+            timestamps: {{ history_data.timestamps|tojson }}
+        };
+
+        function formatTimestamps(timestamps) {
+            if (!Array.isArray(timestamps)) return [];
+            return timestamps.map(function(ts) {
+                return new Date(ts * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            });
+        }
+
+        function initCharts() {
+            var timestamps = historyData.timestamps || [];
+            var cpuData = historyData.cpu_history || [];
+            var memoryData = historyData.memory_history || [];
+
+            var formattedTimestamps = formatTimestamps(timestamps);
+            if (formattedTimestamps.length === 0) {
+                formattedTimestamps = ['00:00','01:00','02:00','03:00','04:00','05:00','06:00'];
+                cpuData = [0,0,0,0,0,0,0];
+                memoryData = [0,0,0,0,0,0,0];
+            }
+
+            // CPU图表
+            try {
+                var cpuChart = echarts.init(document.getElementById('cpu-chart'));
+                cpuChart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                    xAxis: { type: 'category', boundaryGap: false, data: formattedTimestamps },
+                    yAxis: { type: 'value', name: '使用率(%)', min: 0, max: 100 },
+                    series: [{
+                        name: 'CPU使用率',
+                        type: 'line',
+                        smooth: true,
+                        areaStyle: { color: 'rgba(59,130,246,0.15)' },
+                        lineStyle: { color: '#3b82f6', width: 2 },
+                        itemStyle: { color: '#3b82f6' },
+                        data: cpuData
+                    }]
+                });
+                window.addEventListener('resize', function() { cpuChart.resize(); });
+            } catch (e) { console.error('CPU图表初始化失败:', e); }
+
+            // 内存图表
+            try {
+                var memoryChart = echarts.init(document.getElementById('memory-chart'));
+                memoryChart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                    xAxis: { type: 'category', boundaryGap: false, data: formattedTimestamps },
+                    yAxis: { type: 'value', name: '使用率(%)', min: 0, max: 100 },
+                    series: [{
+                        name: '内存使用率',
+                        type: 'line',
+                        smooth: true,
+                        areaStyle: { color: 'rgba(245,158,11,0.15)' },
+                        lineStyle: { color: '#f59e0b', width: 2 },
+                        itemStyle: { color: '#f59e0b' },
+                        data: memoryData
+                    }]
+                });
+                window.addEventListener('resize', function() { memoryChart.resize(); });
+            } catch (e) { console.error('内存图表初始化失败:', e); }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCharts);
+        } else {
+            initCharts();
+        }
+    </script>
+
+    <!-- AI分析功能脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var alertsCheckbox = document.getElementById('alerts');
+            var alertsSelection = document.getElementById('alertsSelection');
+
+            if (alertsCheckbox && alertsSelection) {
+                alertsCheckbox.addEventListener('change', function() {
+                    alertsSelection.style.display = this.checked ? 'block' : 'none';
+                });
+            }
+
+            var alertCheckboxes = document.querySelectorAll('.alert-checkbox');
+            alertCheckboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    if (document.querySelectorAll('.alert-checkbox:checked').length > 100) {
+                        this.checked = false;
+                        alert('最多只能选择100条告警');
+                    }
+                    updateSelectedAlertCount();
+                });
+            });
+
+            updateSelectedAlertCount();
+        });
+
+        function updateSelectedAlertCount() {
+            document.getElementById('selectedAlertCount').textContent = document.querySelectorAll('.alert-checkbox:checked').length;
+        }
+
+        function filterAlertsByTimeRange() {
+            var timeRange = document.getElementById('alertTimeRange').value;
+            var now = Date.now();
+            var alertCheckboxes = document.querySelectorAll('.alert-checkbox');
+
+            var timeRangeMs = 0;
+            var autoCheck = false;
+            var ranges = { '5m':300000,'15m':900000,'30m':1800000,'1h':3600000,'3h':10800000,'6h':21600000,'24h':86400000 };
+            if (ranges[timeRange]) { timeRangeMs = ranges[timeRange]; autoCheck = true; }
+            else if (timeRange === 'all') { autoCheck = true; }
+
+            alertCheckboxes.forEach(function(checkbox) {
+                if (timeRange === '') { checkbox.checked = false; }
+                else {
+                    var alertTime = parseFloat(checkbox.getAttribute('data-alert-time')) * 1000;
+                    checkbox.checked = timeRange === 'all' || (now - alertTime <= timeRangeMs);
+                }
+            });
+            updateSelectedAlertCount();
+        }
+
+        function hideAiAnalysisResult() {
+            document.getElementById('aiAnalysisResult').style.display = 'none';
+        }
+
+        function performAiAnalysis() {
+            document.getElementById('aiAnalysisLoading').style.display = 'block';
+            document.getElementById('aiAnalysisContent').innerHTML = '';
+            document.getElementById('aiAnalysisResult').style.display = 'block';
+
+            var selectedItems = [];
+            document.querySelectorAll('#aiAnalysisForm .form-check-input:checked').forEach(function(cb) {
+                if (!cb.classList.contains('alert-checkbox')) selectedItems.push(cb.value);
+            });
+
+            var selectedAlertIndexes = [];
+            document.querySelectorAll('.alert-checkbox:checked').forEach(function(cb) {
+                selectedAlertIndexes.push(parseInt(cb.value));
+            });
+
+            var analysisData = {
+                server_id: {{ server.id }},
+                selected_items: selectedItems,
+                selected_alert_indexes: selectedAlertIndexes,
+                analysis_type: document.getElementById('analysisType').value,
+                server_data: {
+                    name: '{{ server.name or "" }}',
+                    ip: '{{ server.ip or "" }}',
+                    cpu_cores: '{{ server.cpu or "" }}',
+                    memory: '{{ server.memory or "" }}',
+                    disk: '{{ server.disk or "" }}'
+                },
+                monitoring_data: {{ monitoring_data|default({})|tojson }},
+                history_data: {{ history_data|default({})|tojson }},
+                alerts: [
+                    {% for alert in alerts %}
+                    {
+                        id: {{ alert.id }},
+                        server_id: {{ alert.server_id }},
+                        alert_type: '{{ alert.alert_type }}',
+                        severity: '{{ alert.severity }}',
+                        message: '{{ alert.message|default("") }}',
+                        created_at: '{{ alert.created_at.strftime("%Y-%m-%d %H:%M:%S") }}',
+                        processed_at: {% if alert.processed_at %}'{{ alert.processed_at.strftime("%Y-%m-%d %H:%M:%S") }}'{% else %}null{% endif %}
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            };
+
+            fetch('/monitor/ai_analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify(analysisData)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                document.getElementById('aiAnalysisLoading').style.display = 'none';
+                if (data.success) {
+                    document.getElementById('aiAnalysisContent').innerHTML = data.result;
+                } else {
+                    document.getElementById('aiAnalysisContent').innerHTML = '<div class="alert alert-danger">' + data.message + '</div>';
+                }
+            })
+            .catch(function(error) {
+                document.getElementById('aiAnalysisLoading').style.display = 'none';
+                document.getElementById('aiAnalysisContent').innerHTML = '<div class="alert alert-danger">AI分析失败: ' + error.message + '</div>';
+            });
+
+            bootstrap.Modal.getInstance(document.getElementById('aiAnalysisModal')).hide();
+        }
+    </script>
+{% endblock %}

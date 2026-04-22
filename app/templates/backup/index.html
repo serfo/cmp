@@ -1,0 +1,858 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-header fade-in">
+    <div class="page-header-content">
+        <div class="page-icon">
+            <i class="bi bi-cloud-upload"></i>
+        </div>
+        <div class="page-header-text">
+            <h1 class="page-title">备份管理</h1>
+            <p class="page-subtitle">安全可靠的数据备份解决方案</p>
+        </div>
+    </div>
+    <div class="page-header-actions">
+        <button class="btn btn-primary" onclick="showBackupModal()">
+            <i class="bi bi-plus-circle me-2"></i>立即备份
+        </button>
+    </div>
+</div>
+
+<div class="stats-grid fade-in-up delay-1">
+    <div class="stat-card stat-primary">
+        <div class="stat-card-bg"></div>
+        <div class="stat-card-content">
+            <div class="stat-icon">
+                <i class="bi bi-hdd"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value" id="total-count">-</span>
+                <span class="stat-label">总备份数</span>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card stat-success">
+        <div class="stat-card-bg"></div>
+        <div class="stat-card-content">
+            <div class="stat-icon">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value" id="success-count">-</span>
+                <span class="stat-label">成功备份</span>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card stat-danger">
+        <div class="stat-card-bg"></div>
+        <div class="stat-card-content">
+            <div class="stat-icon">
+                <i class="bi bi-x-circle-fill"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value" id="failed-count">-</span>
+                <span class="stat-label">失败备份</span>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card stat-info">
+        <div class="stat-card-bg"></div>
+        <div class="stat-card-content">
+            <div class="stat-icon">
+                <i class="bi bi-database-fill"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value" id="total-size">-</span>
+                <span class="stat-label">备份容量</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content-card fade-in-up delay-2" id="progress-card" style="display: none;">
+    <div class="advanced-card-header">
+        <div class="card-header-icon">
+            <i class="bi bi-cloud-upload"></i>
+        </div>
+        <h5 class="advanced-card-title">
+            <span id="progress-title">正在备份...</span>
+        </h5>
+        <div class="card-header-actions">
+            <button class="btn btn-sm btn-outline-danger" onclick="cancelBackup()">
+                <i class="bi bi-x-circle me-1"></i>取消
+            </button>
+        </div>
+    </div>
+    <div class="advanced-card-body">
+        <div class="row align-items-center mb-3">
+            <div class="col-md-8">
+                <div class="progress" style="height: 30px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="inline-progress-bar" role="progressbar" style="width: 0%">
+                        <span id="inline-progress-percent" class="h5 mb-0">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <span class="text-muted" id="backup-progress-status">准备中...</span>
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-4">
+                <div class="h4 mb-0" id="inline-progress-files">0</div>
+                <small class="text-muted">文件数</small>
+            </div>
+            <div class="col-4">
+                <div class="h4 mb-0" id="inline-progress-size">0 B</div>
+                <small class="text-muted">已传输</small>
+            </div>
+            <div class="col-4">
+                <div class="h4 mb-0" id="inline-progress-elapsed">0s</div>
+                <small class="text-muted">已用时</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content-card advanced-card fade-in-up delay-3 mt-4">
+    <div class="advanced-card-header">
+        <div class="card-header-icon">
+            <i class="bi bi-clock-history"></i>
+        </div>
+        <h5 class="advanced-card-title">备份历史</h5>
+        <div class="card-header-actions">
+            <input type="text" id="search-backup" class="form-control form-control-sm" placeholder="搜索备份...">
+            <button class="btn btn-sm btn-outline-secondary" onclick="refreshBackups()">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+    </div>
+    <div class="advanced-card-body">
+        <div class="table-responsive">
+            <table class="table-modern" id="backup-table">
+                <thead>
+                    <tr>
+                        <th><i class="bi bi-hash me-2"></i>ID</th>
+                        <th><i class="bi bi-pc me-2"></i>服务器</th>
+                        <th><i class="bi bi-tag me-2"></i>类型</th>
+                        <th><i class="bi bi-clock me-2"></i>时间</th>
+                        <th><i class="bi bi-file-earmark me-2"></i>文件数</th>
+                        <th><i class="bi bi-hdd me-2"></i>大小</th>
+                        <th><i class="bi bi-gear me-2"></i>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="backup-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="backupModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-cloud-upload me-2"></i>创建备份</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="backup-server">选择服务器</label>
+                    <select id="backup-server" class="form-select">
+                        <option value="">-- 选择服务器 --</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <span class="form-label d-block">备份类型</span>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="backup-type" id="type-full" value="full" checked>
+                        <label class="btn btn-outline-primary" for="type-full">全量备份</label>
+                        <input type="radio" class="btn-check" name="backup-type" id="type-incremental" value="incremental">
+                        <label class="btn btn-outline-primary" for="type-incremental">增量备份</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <span class="form-label d-block">选择备份路径</span>
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="path-browser border rounded p-3" id="path-browser" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-muted text-center py-3">
+                                    请先选择服务器
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-center justify-content-center">
+                            <div class="arrow-buttons d-flex flex-column gap-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="addSelectedPath()" title="添加选中">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="removeSelectedPath()" title="移除选中">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="selected-paths border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-muted text-center py-3" id="no-selected">
+                                    选择的路径将显示在这里
+                                </div>
+                                <div id="selected-paths-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="startBackup()">
+                    <i class="bi bi-cloud-upload me-2"></i>开始备份
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-file-earmark-text me-2"></i>文件预览</h5>
+                <div class="ms-auto d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="downloadCurrentFile()">
+                        <i class="bi bi-download me-1"></i>下载
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <pre id="file-preview-content" class="bg-dark text-light p-3 rounded" style="max-height: 60vh; overflow-y: auto;"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="browseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-folder me-2"></i>浏览备份文件</h5>
+                <div class="ms-auto d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" id="download-browse-btn">
+                        <i class="bi bi-download me-1"></i>下载
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <nav aria-label="breadcrumb" class="breadcrumb mb-3">
+                    <ol class="breadcrumb" id="browse-breadcrumb">
+                    </ol>
+                </nav>
+                <div class="table-responsive" style="max-height: 50vh; overflow-y: auto;">
+                    <table class="table table-hover">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th width="40"></th>
+                                <th>名称</th>
+                                <th width="100">大小</th>
+                                <th width="150">修改时间</th>
+                            </tr>
+                        </thead>
+                        <tbody id="browse-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let servers = [];
+let currentBrowsePath = '';
+let selectedPaths = [];
+let currentPreviewFile = null;
+let currentTaskId = null;
+let taskPollInterval = null;
+let taskStartTime = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadServers();
+    loadStats();
+    loadAllBackups();
+
+    document.getElementById('backup-server').addEventListener('change', function() {
+        const serverId = this.value;
+        if (!serverId) {
+            document.getElementById('path-browser').innerHTML = '<div class="text-muted text-center py-3">请先选择服务器</div>';
+            selectedPaths = [];
+            renderSelectedPaths();
+            return;
+        }
+        loadRemotePath(serverId, '/');
+    });
+});
+
+async function loadServers() {
+    try {
+        const res = await fetch('/backup/api/servers');
+        const data = await res.json();
+        if (data.success) {
+            servers = data.data;
+            const select = document.getElementById('backup-server');
+            servers.forEach(s => {
+                select.innerHTML += `<option value="${s.id}">${s.name} (${s.ip})</option>`;
+            });
+        }
+    } catch (e) {
+        console.error('加载服务器失败:', e);
+    }
+}
+
+async function loadStats() {
+    try {
+        const res = await fetch('/backup/api/stats');
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('total-count').textContent = data.data.total_count;
+            document.getElementById('total-size').textContent = data.data.total_size_formatted;
+            document.getElementById('success-count').textContent = data.data.total_count;
+            document.getElementById('failed-count').textContent = '0';
+        }
+    } catch (e) {
+        console.error('加载统计失败:', e);
+    }
+}
+
+async function loadAllBackups() {
+    try {
+        const res = await fetch('/backup/api/list');
+        const data = await res.json();
+        if (data.success) {
+            renderBackupTable(data.data);
+        }
+    } catch (e) {
+        console.error('加载备份列表失败:', e);
+    }
+}
+
+function renderBackupTable(backups) {
+    const tbody = document.getElementById('backup-tbody');
+    if (!backups || backups.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5"><div class="empty-state"><div class="empty-icon"><i class="bi bi-inbox"></i></div><p class="empty-text">暂无备份记录</p></div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = backups.map(b => `
+        <tr>
+            <td>${b.id}</td>
+            <td>${b.server_ip || '-'}</td>
+            <td><span class="badge ${b.type === 'incremental' ? 'bg-warning' : 'bg-primary'}">${b.type === 'incremental' ? '增量' : '全量'}</span></td>
+            <td>${new Date(b.timestamp).toLocaleString()}</td>
+            <td>${b.file_count}</td>
+            <td>${formatSize(b.total_size)}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="browseBackup('${b.server_ip}', '${b.backup_path}')" title="浏览">
+                        <i class="bi bi-folder"></i>
+                    </button>
+                    <button class="btn btn-outline-success" onclick="downloadBackup('${b.server_ip}', '${b.backup_path}')" title="下载">
+                        <i class="bi bi-download"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteBackup('${b.server_ip}', '${b.id}')" title="删除">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function showBackupModal() {
+    const modal = new bootstrap.Modal(document.getElementById('backupModal'));
+    selectedPaths = [];
+    renderSelectedPaths();
+    modal.show();
+}
+
+function renderSelectedPaths() {
+    const container = document.getElementById('selected-paths-list');
+    const noSelected = document.getElementById('no-selected');
+    if (!container || !noSelected) return;
+
+    if (selectedPaths.length === 0) {
+        noSelected.style.display = 'block';
+        container.innerHTML = '';
+    } else {
+        noSelected.style.display = 'none';
+        container.innerHTML = selectedPaths.map(p => `
+            <div class="d-flex align-items-center justify-content-between p-2 bg-light rounded mb-1">
+                <span><i class="bi bi-file-earmark me-2"></i>${p}</span>
+                <button class="btn btn-sm btn-link text-danger p-0" onclick="removePath('${p.replace(/'/g, "\\'")}')">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+}
+
+function removePath(path) {
+    const idx = selectedPaths.indexOf(path);
+    if (idx >= 0) selectedPaths.splice(idx, 1);
+    renderSelectedPaths();
+}
+
+async function loadRemotePath(serverId, path) {
+    try {
+        const res = await fetch(`/backup/api/remote-files?server_id=${serverId}&path=${encodeURIComponent(path)}`);
+        const data = await res.json();
+        if (data.success) {
+            renderPathBrowser(data.data, serverId, path);
+        } else {
+            document.getElementById('path-browser').innerHTML = `<div class="text-danger text-center py-3">${data.message}</div>`;
+        }
+    } catch (e) {
+        document.getElementById('path-browser').innerHTML = `<div class="text-danger text-center py-3">加载失败: ${e}</div>`;
+    }
+}
+
+function renderPathBrowser(items, serverId, currentPath) {
+    const browser = document.getElementById('path-browser');
+    let html = `
+        <div class="mb-2 d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadRemotePath(${serverId}, '/')">
+                <i class="bi bi-house-door"></i>
+            </button>
+            <span class="text-muted">${currentPath}</span>
+        </div>
+    `;
+
+    if (items.length === 0) {
+        html += '<div class="text-muted text-center py-3">目录为空</div>';
+    } else {
+        items.forEach(item => {
+            const icon = item.is_dir ? '<i class="bi bi-folder text-warning"></i>' : '<i class="bi bi-file-earmark"></i>';
+            const isSelected = selectedPaths.includes(item.path);
+            const selectedClass = isSelected ? 'bg-primary bg-opacity-10 border-primary' : '';
+            const checkmark = isSelected ? '<i class="bi bi-check-circle-fill text-primary me-2"></i>' : '';
+
+            if (item.is_dir) {
+                html += `
+                    <div class="path-item d-flex align-items-center p-2 rounded ${selectedClass} border mb-1" style="cursor: pointer;"
+                         onclick="togglePathSelection('${item.path}', true, ${serverId})"
+                         ondblclick="navigateToDirectory(${serverId}, '${item.path}')">
+                        ${checkmark}${icon}
+                        <span class="ms-2 flex-grow-1">${item.name}</span>
+                        <small class="text-muted">单击选中 | 双击进入</small>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="path-item d-flex align-items-center p-2 rounded ${selectedClass} border mb-1" style="cursor: pointer;"
+                         onclick="togglePathSelection('${item.path}', false, ${serverId})">
+                        ${checkmark}${icon}
+                        <span class="ms-2 flex-grow-1">${item.name}</span>
+                        <small class="text-muted">${formatSize(item.size)}</small>
+                    </div>
+                `;
+            }
+        });
+    }
+
+    browser.innerHTML = html;
+}
+
+function togglePathSelection(path, isDir, serverId) {
+    const idx = selectedPaths.indexOf(path);
+    if (idx >= 0) {
+        selectedPaths.splice(idx, 1);
+    } else {
+        selectedPaths.push(path);
+    }
+    renderSelectedPaths();
+    renderPathBrowserUpdateSelection();
+}
+
+function navigateToDirectory(serverId, path) {
+    loadRemotePath(serverId, path);
+}
+
+function renderPathBrowserUpdateSelection() {
+    const browser = document.getElementById('path-browser');
+    if (!browser) return;
+    browser.querySelectorAll('.path-item').forEach(item => {
+        const onclick = item.getAttribute('onclick');
+        const match = onclick.match(/togglePathSelection\('([^']+)'/);
+        if (match) {
+            const path = match[1];
+            if (selectedPaths.includes(path)) {
+                item.classList.add('bg-primary', 'bg-opacity-10', 'border-primary');
+                if (!item.querySelector('.bi-check-circle-fill')) {
+                    item.insertAdjacentHTML('afterbegin', '<i class="bi bi-check-circle-fill text-primary me-2"></i>');
+                }
+            } else {
+                item.classList.remove('bg-primary', 'bg-opacity-10', 'border-primary');
+                const check = item.querySelector('.bi-check-circle-fill');
+                if (check) check.remove();
+            }
+        }
+    });
+}
+
+async function startBackup() {
+    const serverId = document.getElementById('backup-server').value;
+    const backupType = document.querySelector('input[name="backup-type"]:checked').value;
+
+    if (!serverId) {
+        showToast('请选择服务器', '', 'warning');
+        return;
+    }
+
+    if (selectedPaths.length === 0) {
+        showToast('请选择要备份的路径', '', 'warning');
+        return;
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('backupModal')).hide();
+    showInlineProgress();
+    startBackupTask(serverId, backupType);
+}
+
+async function startBackupTask(serverId, backupType) {
+    try {
+        const res = await fetch('/backup/api/backup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                server_id: parseInt(serverId),
+                paths: selectedPaths,
+                type: backupType,
+                async: true
+            })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            currentTaskId = data.task_id;
+            taskStartTime = Date.now();
+            updateInlineProgress('正在连接服务器...', 0, 0, 'connecting');
+            startTaskPolling();
+        } else {
+            hideInlineProgress();
+            showToast('备份失败', data.message, 'danger');
+        }
+    } catch (e) {
+        hideInlineProgress();
+        showToast('备份失败', e.message, 'danger');
+    }
+}
+
+function startTaskPolling() {
+    if (taskPollInterval) {
+        clearInterval(taskPollInterval);
+    }
+
+    taskPollInterval = setInterval(async () => {
+        if (!currentTaskId) {
+            clearInterval(taskPollInterval);
+            return;
+        }
+
+        try {
+            const res = await fetch(`/backup/api/backup/status/${currentTaskId}`);
+            const data = await res.json();
+
+            if (data.success) {
+                const task = data.data;
+                updateInlineProgress(
+                    task.current_file || '处理中...',
+                    task.file_count || 0,
+                    task.total_size || 0,
+                    task.status
+                );
+
+                if (task.status === 'completed') {
+                    clearInterval(taskPollInterval);
+                    hideInlineProgress();
+                    showToast('备份成功', `已完成 ${task.file_count} 个文件`, 'success');
+                    refreshBackups();
+                    currentTaskId = null;
+                } else if (task.status === 'failed') {
+                    clearInterval(taskPollInterval);
+                    hideInlineProgress();
+                    showToast('备份失败', task.error || '未知错误', 'danger');
+                    currentTaskId = null;
+                }
+            } else {
+                clearInterval(taskPollInterval);
+                hideInlineProgress();
+            }
+        } catch (e) {
+            clearInterval(taskPollInterval);
+            hideInlineProgress();
+        }
+    }, 1000);
+}
+
+function showInlineProgress() {
+    document.getElementById('progress-card').style.display = 'block';
+    document.getElementById('inline-progress-bar').style.width = '0%';
+    document.getElementById('inline-progress-percent').textContent = '0%';
+    document.getElementById('progress-title').textContent = '正在备份...';
+    document.getElementById('backup-progress-status').textContent = '准备中...';
+    document.getElementById('inline-progress-files').textContent = '0';
+    document.getElementById('inline-progress-size').textContent = '0 B';
+    document.getElementById('inline-progress-elapsed').textContent = '0s';
+    document.getElementById('inline-progress-bar').className = 'progress-bar progress-bar-striped progress-bar-animated';
+}
+
+function updateInlineProgress(currentFile, fileCount, totalSize, status) {
+    const elapsed = Math.floor((Date.now() - taskStartTime) / 1000);
+
+    let statusText = '处理中...';
+    let progressPercent = 0;
+    let barClass = 'progress-bar-striped progress-bar-animated';
+
+    switch (status) {
+        case 'connecting':
+            statusText = '正在连接服务器...';
+            progressPercent = 10;
+            break;
+        case 'scanning':
+            statusText = `正在扫描: ${currentFile}`;
+            progressPercent = 30;
+            break;
+        case 'downloading':
+            statusText = `正在下载: ${currentFile}`;
+            progressPercent = 50 + Math.min(fileCount * 5, 40);
+            break;
+        case 'downloaded':
+            statusText = `已下载: ${currentFile}`;
+            progressPercent = 90;
+            break;
+        case 'completed':
+            statusText = '备份完成!';
+            progressPercent = 100;
+            barClass = 'bg-success';
+            break;
+        case 'error':
+            statusText = `错误: ${currentFile}`;
+            barClass = 'bg-danger';
+            break;
+        default:
+            statusText = currentFile || '处理中...';
+    }
+
+    const progressBar = document.getElementById('inline-progress-bar');
+    progressBar.style.width = progressPercent + '%';
+    progressBar.className = `progress-bar ${barClass}`;
+    document.getElementById('inline-progress-percent').textContent = progressPercent + '%';
+    document.getElementById('progress-title').textContent = statusText;
+    document.getElementById('inline-progress-files').textContent = fileCount;
+    document.getElementById('inline-progress-size').textContent = formatSize(totalSize);
+    document.getElementById('inline-progress-elapsed').textContent = elapsed + 's';
+}
+
+function hideInlineProgress() {
+    document.getElementById('progress-card').style.display = 'none';
+}
+
+function cancelBackup() {
+    if (confirm('确定要取消当前备份任务吗？')) {
+        if (taskPollInterval) {
+            clearInterval(taskPollInterval);
+        }
+        currentTaskId = null;
+        taskStartTime = null;
+        hideInlineProgress();
+        showToast('已取消', '备份任务已取消', 'warning');
+    }
+}
+
+function refreshBackups() {
+    loadStats();
+    loadAllBackups();
+}
+
+async function browseBackup(serverIp, backupPath) {
+    const fullPath = serverIp + '/' + backupPath;
+    try {
+        const res = await fetch(`/backup/api/files?server_ip=${encodeURIComponent(serverIp)}&path=${encodeURIComponent(backupPath)}`);
+        const data = await res.json();
+        if (data.success) {
+            currentBrowsePath = fullPath;
+            currentPreviewFile = {server_ip: serverIp};
+            renderBrowseContent(data.data, serverIp, fullPath);
+            renderBreadcrumb(fullPath, serverIp);
+            const modal = new bootstrap.Modal(document.getElementById('browseModal'));
+            modal.show();
+        }
+    } catch (e) {
+        showToast('加载失败', e.message, 'danger');
+    }
+}
+
+function renderBrowseContent(items, serverIp, path) {
+    const tbody = document.getElementById('browse-tbody');
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">目录为空</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(item => `
+        <tr onclick="onBrowseItemClick('${item.path}', ${item.is_dir}, '${serverIp}')" style="cursor: pointer;">
+            <td>${item.is_dir ? '<i class="bi bi-folder text-warning"></i>' : '<i class="bi bi-file-earmark"></i>'}</td>
+            <td>${item.name}</td>
+            <td>${item.is_dir ? '-' : formatSize(item.size)}</td>
+            <td>${new Date(item.mtime * 1000).toLocaleString()}</td>
+        </tr>
+    `).join('');
+
+    document.getElementById('download-browse-btn').onclick = () => downloadBrowseDirectory(serverIp, path);
+}
+
+function renderBreadcrumb(path, serverIp) {
+    const breadcrumb = document.getElementById('browse-breadcrumb');
+    let displayPath = path;
+    if (path.startsWith(serverIp + '/')) {
+        displayPath = path.substring(serverIp.length + 1);
+    }
+    const parts = displayPath.split('/').filter(p => p);
+    let html = `<li class="breadcrumb-item"><a href="#" onclick="loadBrowseDirectory('${serverIp}', '${serverIp}/'); return false;">根目录</a></li>`;
+    let current = serverIp + '/';
+    parts.forEach(part => {
+        current += part + '/';
+        html += `<li class="breadcrumb-item"><a href="#" onclick="loadBrowseDirectory('${serverIp}', '${current}'); return false;">${part}</a></li>`;
+    });
+    breadcrumb.innerHTML = html;
+}
+
+function onBrowseItemClick(path, isDir, serverIp) {
+    let fullPath = path;
+    if (!path.startsWith(serverIp + '/')) {
+        fullPath = serverIp + '/' + path;
+    }
+
+    if (isDir) {
+        loadBrowseDirectory(serverIp, fullPath);
+    } else {
+        previewFile(fullPath, serverIp);
+    }
+}
+
+async function loadBrowseDirectory(serverIp, fullPath) {
+    let apiPath = fullPath;
+    if (fullPath.startsWith(serverIp + '/')) {
+        apiPath = fullPath.substring(serverIp.length + 1);
+    }
+
+    try {
+        const res = await fetch(`/backup/api/files?server_ip=${encodeURIComponent(serverIp)}&path=${encodeURIComponent(apiPath)}`);
+        const data = await res.json();
+        if (data.success) {
+            currentBrowsePath = fullPath;
+            renderBrowseContent(data.data, serverIp, fullPath);
+            renderBreadcrumb(fullPath, serverIp);
+        }
+    } catch (e) {
+        showToast('加载失败', e.message, 'danger');
+    }
+}
+
+async function previewFile(filePath, serverIp) {
+    try {
+        const res = await fetch('/backup/api/preview', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({path: filePath, server_ip: serverIp})
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentPreviewFile = {path: filePath, server_ip: serverIp};
+            document.getElementById('file-preview-content').textContent = data.content.join('\n');
+            const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+            modal.show();
+        } else {
+            showToast('预览失败', data.message, 'danger');
+        }
+    } catch (e) {
+        showToast('预览失败', e.message, 'danger');
+    }
+}
+
+function downloadCurrentFile() {
+    if (currentPreviewFile) {
+        window.location.href = `/backup/api/download?path=${encodeURIComponent(currentPreviewFile.path)}&server_ip=${encodeURIComponent(currentPreviewFile.server_ip)}`;
+    }
+}
+
+async function downloadBrowseDirectory(serverIp, path) {
+    try {
+        const res = await fetch('/backup/api/download-directory', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({path: path, server_ip: serverIp})
+        });
+        if (!res.ok) {
+            const data = await res.json();
+            showToast('下载失败', data.message, 'danger');
+            return;
+        }
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = path.split('/').filter(p => p).pop() + '.tar.gz';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    } catch (e) {
+        showToast('下载失败', e.message, 'danger');
+    }
+}
+
+async function downloadBackup(serverIp, backupPath) {
+    await downloadBrowseDirectory(serverIp, backupPath);
+}
+
+async function deleteBackup(serverIp, backupId) {
+    if (!confirm('确定要删除这个备份吗？')) return;
+    try {
+        const res = await fetch('/backup/api/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({server_ip: serverIp, backup_id: parseInt(backupId)})
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('删除成功', '', 'success');
+            refreshBackups();
+        } else {
+            showToast('删除失败', data.message, 'danger');
+        }
+    } catch (e) {
+        showToast('删除失败', e.message, 'danger');
+    }
+}
+
+function formatSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function showToast(title, message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.innerHTML = `<div class="d-flex"><div class="toast-body">${title}${message ? ': ' + message : ''}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    toast.addEventListener('hidden.bs.toast', () => toast.remove());
+}
+</script>
+{% endblock %}

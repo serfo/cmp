@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="page-header fade-in">
+        <div class="page-header-content">
+            <div class="page-icon">
+                <i class="bi bi-hdd-network"></i>
+            </div>
+            <div class="page-header-text">
+                <h1 class="page-title">服务器管理</h1>
+                <p class="page-subtitle">集中管理所有服务器资源，实时监控运行状态</p>
+            </div>
+        </div>
+        <div class="page-header-actions">
+            <button id="refresh-all-servers" class="btn btn-secondary">
+                <i class="bi bi-arrow-clockwise me-2"></i>刷新所有节点
+            </button>
+            <a href="{{ url_for('server.add') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>添加服务器
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+    </div>
+
+    <script>
+    </script>
+
+    <div class="content-card advanced-card fade-in-up delay-1">
+        <div class="advanced-card-header">
+            <div class="card-header-icon">
+                <i class="bi bi-list-columns"></i>
+            </div>
+            <h5 class="advanced-card-title">服务器列表</h5>
+            <div class="card-header-actions">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="搜索服务器..." class="form-control" id="server-search">
+                </div>
+            </div>
+        </div>
+        <div class="advanced-card-body">
+            <div class="table-responsive">
+                <table class="table-modern">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-hash me-2"></i>ID</th>
+                            <th><i class="bi bi-hdd-stack me-2"></i>服务器名称</th>
+                            <th><i class="bi bi-geo-alt me-2"></i>IP地址</th>
+                            <th><i class="bi bi-plug me-2"></i>端口</th>
+                            <th><i class="bi bi-person me-2"></i>用户名</th>
+                            <th><i class="bi bi-laptop me-2"></i>操作系统</th>
+                            <th><i class="bi bi-cpu me-2"></i>CPU</th>
+                            <th><i class="bi bi-memory me-2"></i>内存</th>
+                            <th><i class="bi bi-device-hdd me-2"></i>磁盘</th>
+                            <th><i class="bi bi-circle-fill me-2"></i>状态</th>
+                            <th><i class="bi bi-gear me-2"></i>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for server in servers %}
+                            <tr>
+                                <td><span class="server-id">#{{ server.id }}</span></td>
+                                <td>
+                                    <div class="server-name">
+                                        <div class="server-icon">
+                                            <i class="bi bi-hdd-stack-fill"></i>
+                                        </div>
+                                        <div class="server-info">
+                                            <span class="server-title">{{ server.name }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="ip-address">
+                                        <i class="bi bi-geo-alt-fill me-1"></i>
+                                        {{ server.ip }}
+                                    </span>
+                                </td>
+                                <td>{{ server.port }}</td>
+                                <td>{{ server.username }}</td>
+                                <td>{{ server.os or '未知' }}</td>
+                                <td>
+                                    <span class="resource-tag">
+                                        <i class="bi bi-cpu me-1"></i>
+                                        {{ server.cpu or '未知' }}核
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="resource-tag">
+                                        <i class="bi bi-memory me-1"></i>
+                                        {{ server.memory or '小于1' }}GB
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="resource-tag">
+                                        <i class="bi bi-device-hdd me-1"></i>
+                                        {{ server.disk or '未知' }}GB
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if server.status == 'online' %}
+                                        <span class="status-badge status-online">
+                                            <i class="bi bi-check-circle me-1"></i>在线
+                                        </span>
+                                    {% elif server.status == 'warning' %}
+                                        <span class="status-badge status-warning">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>警告
+                                        </span>
+                                    {% elif server.status == 'error' %}
+                                        <span class="status-badge status-error">
+                                            <i class="bi bi-x-circle me-1"></i>错误
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge status-offline">
+                                            <i class="bi bi-slash-circle me-1"></i>离线
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{{ url_for('server.edit', id=server.id) }}" class="btn btn-sm btn-icon btn-warning" title="编辑">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </a>
+                                        <a href="{{ url_for('server.delete', id=server.id) }}" class="btn btn-sm btn-icon btn-danger" title="删除" onclick="return confirm('确定要删除该服务器吗？')">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-card advanced-card fade-in-up delay-2">
+        <div class="advanced-card-header">
+            <div class="card-header-icon" style="background: var(--gray-100); color: var(--gray-600);">
+                <i class="bi bi-journal-text"></i>
+            </div>
+            <h5 class="advanced-card-title">操作日志</h5>
+            <div class="card-header-actions">
+                <button class="btn btn-sm btn-outline-secondary" id="clear-logs">
+                    <i class="bi bi-trash me-1"></i>清空日志
+                </button>
+            </div>
+        </div>
+        <div class="advanced-card-body">
+            <div id="operation-logs" class="logs-container">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="keyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">SSH 密钥信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">公钥（请复制并添加到服务器的 ~/.ssh/authorized_keys 文件）</label>
+                        <textarea id="public-key-display" class="form-control font-monospace small" rows="4" readonly></textarea>
+                        <button class="btn btn-outline-primary btn-sm mt-2" id="copy-public-key">
+                            <i class="bi bi-clipboard me-1"></i>复制公钥
+                        </button>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">私钥（请妥善保管，不要泄露）</label>
+                        <textarea id="private-key-display" class="form-control font-monospace small" rows="6" readonly></textarea>
+                        <button class="btn btn-outline-primary btn-sm mt-2" id="copy-private-key">
+                            <i class="bi bi-clipboard me-1"></i>复制私钥
+                        </button>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>安全提示：</strong>私钥是您服务器的访问凭证，请妥善保管，不要泄露给任何人。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-success" id="deploy-generated-key">
+                        <i class="bi bi-cloud-upload me-2"></i>部署到服务器
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const refreshBtn = document.getElementById('refresh-all-servers');
+            const logsContainer = document.getElementById('operation-logs');
+            const clearLogsBtn = document.getElementById('clear-logs');
+            const serverSearch = document.getElementById('server-search');
+            const keyModal = new bootstrap.Modal(document.getElementById('keyModal'));
+            
+            let generatedPublicKey = null;
+            let generatedPrivateKey = null;
+            
+            function addLog(message, isError = false) {
+                const logDiv = document.createElement('div');
+                logDiv.className = `log-entry ${isError ? 'log-error' : 'log-success'}`;
+                const timestamp = new Date().toLocaleString('zh-CN');
+                logDiv.innerHTML = `
+                    <span class="log-time">[${timestamp}]</span>
+                    <span class="log-message">${message}</span>
+                `;
+                logsContainer.appendChild(logDiv);
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+            
+            function addLogHTML(html) {
+                const logDiv = document.createElement('div');
+                logDiv.className = 'log-entry';
+                logDiv.innerHTML = html;
+                logsContainer.appendChild(logDiv);
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+            
+            refreshBtn.addEventListener('click', function() {
+                addLog('开始刷新所有服务器...');
+                fetch('/server/refresh-all')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            addLog('刷新完成！');
+                            data.logs.forEach(log => {
+                                if (log.includes('✓')) {
+                                    addLog(log, false);
+                                } else if (log.includes('✗')) {
+                                    addLog(log, true);
+                                } else {
+                                    addLog(log);
+                                }
+                            });
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            addLog('刷新失败：' + data.message, true);
+                        }
+                    })
+                    .catch(error => {
+                        addLog('请求失败：' + error.message, true);
+                    });
+            });
+            
+            clearLogsBtn.addEventListener('click', function() {
+                logsContainer.innerHTML = '';
+                addLog('日志已清空');
+            });
+            
+            serverSearch.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                document.querySelectorAll('.table-modern tbody tr').forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+            
+        });
+    </script>
+    {% endblock %}
+{% endblock %}

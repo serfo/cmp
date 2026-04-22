@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="page-header fade-in">
+        <div class="page-header-content">
+            <div class="page-icon">
+                <i class="bi bi-gear-wide-connected"></i>
+            </div>
+            <div class="page-header-text">
+                <h1 class="page-title">自动化运维</h1>
+                <p class="page-subtitle">集中管理所有自动化任务，提高运维效率</p>
+            </div>
+        </div>
+        <div class="page-header-actions">
+            <a href="{{ url_for('automation.add') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>添加任务
+            </a>
+        </div>
+    </div>
+
+    <div class="content-card advanced-card fade-in-up delay-1">
+        <div class="advanced-card-header">
+            <div class="card-header-icon">
+                <i class="bi bi-list-check"></i>
+            </div>
+            <h5 class="advanced-card-title">任务列表</h5>
+            <div class="card-header-actions">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="搜索任务..." class="form-control">
+                </div>
+            </div>
+        </div>
+        <div class="advanced-card-body">
+            <div class="table-responsive">
+                <table class="table-modern">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-hash me-2"></i>ID</th>
+                            <th><i class="bi bi-clipboard me-2"></i>任务名称</th>
+                            <th><i class="bi bi-tag me-2"></i>任务类型</th>
+                            <th><i class="bi bi-circle-fill me-2"></i>状态</th>
+                            <th><i class="bi bi-clock me-2"></i>定时表达式</th>
+                            <th><i class="bi bi-terminal me-2"></i>命令</th>
+                            <th><i class="bi bi-server me-2"></i>目标服务器</th>
+                            <th><i class="bi bi-person me-2"></i>创建人</th>
+                            <th><i class="bi bi-clock-history me-2"></i>最后执行</th>
+                            <th><i class="bi bi-calendar-event me-2"></i>下次执行</th>
+                            <th><i class="bi bi-gear me-2"></i>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                            <tr>
+                                <td>
+                                    <span class="task-id">#{{ task.id }}</span>
+                                </td>
+                                <td>
+                                    <div class="task-name">
+                                        <span class="task-title">{{ task.name }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if task.task_type == 'backup' %}
+                                        <span class="tag tag-primary">
+                                            <i class="bi bi-cloud-upload me-1"></i>备份
+                                        </span>
+                                    {% elif task.task_type == 'deploy' %}
+                                        <span class="tag tag-success">
+                                            <i class="bi bi-rocket-takeoff me-1"></i>部署
+                                        </span>
+                                    {% elif task.task_type == 'monitor' %}
+                                        <span class="tag tag-warning">
+                                            <i class="bi bi-activity me-1"></i>监控
+                                        </span>
+                                    {% elif task.task_type == 'command' %}
+                                        <span class="tag tag-gray">
+                                            <i class="bi bi-terminal me-1"></i>命令
+                                        </span>
+                                    {% else %}
+                                        <span class="tag tag-gray">
+                                            <i class="bi bi-three-dots me-1"></i>其他
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.status == 'pending' %}
+                                        <span class="status-badge status-offline">
+                                            <i class="bi bi-clock me-1"></i>待执行
+                                        </span>
+                                    {% elif task.status == 'running' %}
+                                        <span class="status-badge status-warning">
+                                            <i class="bi bi-play-circle me-1"></i>运行中
+                                        </span>
+                                    {% elif task.status == 'completed' %}
+                                        <span class="status-badge status-online">
+                                            <i class="bi bi-check-circle me-1"></i>已完成
+                                        </span>
+                                    {% elif task.status == 'failed' %}
+                                        <span class="status-badge status-error">
+                                            <i class="bi bi-x-circle me-1"></i>失败
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="cron-expression">{{ task.cron_expression or '手动执行' }}</span>
+                                </td>
+                                <td>
+                                    <div class="command-preview" title="{{ task.command }}">
+                                        {{ task.command[:50] }}{{ '...' if task.command|length > 50 else '' }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="target-servers">{{ task.target_servers }}</span>
+                                </td>
+                                <td>
+                                    <div class="creator-info">
+                                        <i class="bi bi-person-circle me-1"></i>
+                                        {{ task.creator.username }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if task.last_executed_at %}
+                                        <span class="execution-time">
+                                            <i class="bi bi-calendar3 me-1"></i>
+                                            {{ task.last_executed_at.strftime('%Y-%m-%d %H:%M') }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.next_executed_at %}
+                                        <span class="execution-time">
+                                            <i class="bi bi-calendar3 me-1"></i>
+                                            {{ task.next_executed_at.strftime('%Y-%m-%d %H:%M') }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{{ url_for('automation.run', id=task.id) }}" class="btn btn-sm btn-icon btn-success" title="执行">
+                                            <i class="bi bi-play-fill"></i>
+                                        </a>
+                                        <a href="{{ url_for('automation.edit', id=task.id) }}" class="btn btn-sm btn-icon btn-warning" title="编辑">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </a>
+                                        <a href="{{ url_for('automation.logs', id=task.id) }}" class="btn btn-sm btn-icon btn-primary" title="日志">
+                                            <i class="bi bi-journal-text"></i>
+                                        </a>
+                                        <a href="{{ url_for('automation.delete', id=task.id) }}" class="btn btn-sm btn-icon btn-danger" title="删除" onclick="return confirm('确定要删除该任务吗？')">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,873 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .command-preset-container {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    .command-preset-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    .command-preset-label i {
+        color: #0d6efd;
+    }
+    
+    .command-preset-wrapper {
+        position: relative;
+    }
+    
+    .command-preset-select {
+        width: 100%;
+        padding: 0.625rem 2.5rem 0.625rem 1rem;
+        font-size: 0.9375rem;
+        border: 2px solid #dee2e6;
+        border-radius: 0.5rem;
+        background-color: #fff;
+        cursor: pointer;
+        appearance: none;
+        transition: all 0.2s ease;
+    }
+    
+    .command-preset-select:hover {
+        border-color: #adb5bd;
+    }
+    
+    .command-preset-select:focus {
+        outline: none;
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+    }
+    
+    .command-preset-icon {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        pointer-events: none;
+        transition: transform 0.2s ease;
+    }
+    
+    .command-preset-select:focus + .command-preset-icon,
+    .command-preset-wrapper:hover .command-preset-icon {
+        color: #0d6efd;
+        transform: translateY(-50%) rotate(180deg);
+    }
+    
+    .command-category {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6c757d;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .command-option {
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+    
+    .command-option:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .command-option-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        flex-shrink: 0;
+    }
+    
+    .command-option-icon.system { background-color: #e7f1ff; color: #0d6efd; }
+    .command-option-icon.time { background-color: #fff3cd; color: #ffc107; }
+    .command-option-icon.timezone { background-color: #d1e7dd; color: #198754; }
+    .command-option-icon.dns { background-color: #cff4fc; color: #0aa2c0; }
+    .command-option-icon.network { background-color: #f8d7da; color: #dc3545; }
+    .command-option-icon.service { background-color: #e2d9f3; color: #6f42c1; }
+    .command-option-icon.security { background-color: #ffe5d0; color: #fd7e14; }
+    .command-option-icon.other { background-color: #f1f3f5; color: #495057; }
+    
+    .command-option-content {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .command-option-name {
+        font-weight: 500;
+        color: #212529;
+        margin-bottom: 0.25rem;
+    }
+    
+    .command-option-desc {
+        font-size: 0.8125rem;
+        color: #6c757d;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .command-preview {
+        margin-top: 0.75rem;
+        padding: 0.75rem 1rem;
+        background-color: #f8f9fa;
+        border: 1px dashed #dee2e6;
+        border-radius: 0.5rem;
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 0.8125rem;
+        color: #495057;
+        display: none;
+    }
+    
+    .command-preview.show {
+        display: block;
+        animation: fadeIn 0.2s ease;
+    }
+    
+    .command-preview-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .command-preview-value {
+        word-break: break-all;
+        color: #0d6efd;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .form-text-hint {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        font-size: 0.8125rem;
+        color: #6c757d;
+    }
+    
+    .form-text-hint i {
+        color: #0d6efd;
+    }
+    
+    /* AI Command Assistant Styles */
+    .ai-assistant-container {
+        margin-bottom: 1rem;
+        padding: 1.25rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 0.75rem;
+        color: white;
+    }
+    
+    .ai-assistant-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    
+    .ai-assistant-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 0.5rem;
+        font-size: 1.25rem;
+    }
+    
+    .ai-assistant-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .ai-assistant-subtitle {
+        font-size: 0.8125rem;
+        opacity: 0.85;
+        margin: 0;
+    }
+    
+    .ai-input-wrapper {
+        position: relative;
+    }
+    
+    .ai-input-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .ai-input-field {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 0.5rem;
+        font-size: 0.9375rem;
+        background: rgba(255, 255, 255, 0.95);
+        color: #212529;
+        transition: all 0.2s ease;
+    }
+    
+    .ai-input-field::placeholder {
+        color: #6c757d;
+    }
+    
+    .ai-input-field:focus {
+        outline: none;
+        border-color: rgba(255, 255, 255, 0.6);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+    }
+    
+    .ai-btn {
+        padding: 0.75rem 1.25rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .ai-btn-generate {
+        background: #fff;
+        color: #667eea;
+    }
+    
+    .ai-btn-generate:hover {
+        background: #f8f9fa;
+        transform: translateY(-1px);
+    }
+    
+    .ai-btn-generate:active {
+        transform: translateY(0);
+    }
+    
+    .ai-btn-clear {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    
+    .ai-btn-clear:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .ai-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+    
+    .ai-loading {
+        display: none;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 0.5rem;
+        margin-top: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .ai-loading.show {
+        display: flex;
+    }
+    
+    .ai-spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .ai-result {
+        display: none;
+        padding: 0.75rem 1rem;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 0.5rem;
+        margin-top: 0.75rem;
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 0.8125rem;
+    }
+    
+    .ai-result.show {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    .ai-result-label {
+        font-size: 0.75rem;
+        opacity: 0.8;
+        margin-bottom: 0.5rem;
+    }
+    
+    .ai-result-command {
+        color: #fff;
+        word-break: break-all;
+        line-height: 1.5;
+    }
+    
+    .ai-error {
+        display: none;
+        padding: 0.75rem 1rem;
+        background: rgba(220, 53, 69, 0.3);
+        border-radius: 0.5rem;
+        margin-top: 0.75rem;
+        font-size: 0.8125rem;
+    }
+    
+    .ai-error.show {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    .ai-error-icon {
+        font-size: 1rem;
+    }
+    
+    .ai-hint {
+        margin-top: 0.75rem;
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+    
+    .ai-hint i {
+        margin-right: 0.25rem;
+    }
+</style>
+
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4>添加自动化任务</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('automation.add') }}">
+                        <input type="hidden" id="ai_prompt" name="ai_prompt" value="{{ ai_prompt or '' }}">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">任务名称</label>
+                            <input type="text" class="form-control" id="name" name="name" required value="{{ prefill_data.name }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="task_type" class="form-label">任务类型</label>
+                            <select class="form-select" id="task_type" name="task_type" required>
+                                <option value="command" {% if prefill_data.task_type == 'command' %}selected{% endif %}>命令</option>
+                                <option value="backup" {% if prefill_data.task_type == 'backup' %}selected{% endif %}>备份</option>
+                                <option value="deploy" {% if prefill_data.task_type == 'deploy' %}selected{% endif %}>部署</option>
+                                <option value="monitor" {% if prefill_data.task_type == 'monitor' %}selected{% endif %}>监控</option>
+                                <option value="other" {% if prefill_data.task_type == 'other' %}selected{% endif %}>其他</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cron_expression" class="form-label">定时表达式（留空则手动执行）</label>
+                            <input type="text" class="form-control" id="cron_expression" name="cron_expression" placeholder="例如：0 0 * * *">
+                        </div>
+                        
+                        <!-- 常用命令选择框 -->
+                        <div class="command-preset-container">
+                            <label class="command-preset-label">
+                                <i class="bi bi-terminal"></i>
+                                <span>常用命令快速选择</span>
+                            </label>
+                            <div class="command-preset-wrapper">
+                                <select id="command_preset" class="command-preset-select">
+                                    <option value="">-- 请选择常用命令 --</option>
+                                    <optgroup label="系统状态">
+                                        <option value="system_load" data-category="system" data-desc="查看系统负载、CPU、内存使用情况">
+                                            系统负载查看 - top
+                                        </option>
+                                        <option value="memory_status" data-category="system" data-desc="查看内存和交换分区使用情况">
+                                            内存状态查看 - free
+                                        </option>
+                                        <option value="disk_usage" data-category="system" data-desc="查看磁盘空间使用情况">
+                                            磁盘使用查看 - df
+                                        </option>
+                                        <option value="process_status" data-category="system" data-desc="查看运行中的进程">
+                                            进程状态查看 - ps
+                                        </option>
+                                        <option value="system_info" data-category="system" data-desc="查看系统版本和硬件信息">
+                                            系统信息查看 - uname
+                                        </option>
+                                    </optgroup>
+                                    <optgroup label="时间同步">
+                                        <option value="time_sync" data-category="time" data-desc="查看NTP时间同步状态">
+                                            时间同步状态 - timedatectl
+                                        </option>
+                                        <option value="ntp_status" data-category="time" data-desc="查看NTP服务状态">
+                                            NTP服务状态 - systemctl status ntpd
+                                        </option>
+                                        <option value="time_settings" data-category="time" data-desc="查看当前系统时间设置">
+                                            时间设置查看 - date
+                                        </option>
+                                    </optgroup>
+                                    <optgroup label="时区配置">
+                                        <option value="timezone_check" data-category="timezone" data-desc="查看当前系统时区设置">
+                                            时区查看 - timedatectl
+                                        </option>
+                                        <option value="timezone_list" data-category="timezone" data-desc="列出所有可用时区">
+                                            时区列表 - timedatectl list-timezones
+                                        </option>
+                                    </optgroup>
+                                    <optgroup label="DNS配置">
+                                        <option value="dns_resolver" data-category="dns" data-desc="查看DNS解析器配置">
+                                            DNS解析器 - resolvectl status
+                                        </option>
+                                        <option value="dns_hosts" data-category="dns" data-desc="查看hosts文件配置">
+                                            Hosts文件 - cat /etc/hosts
+                                        </option>
+                                        <option value="dns_lookup" data-category="dns" data-desc="测试域名解析">
+                                            DNS查询 - nslookup
+                                        </option>
+                                        <option value="dns_cache" data-category="dns" data-desc="查看DNS缓存状态">
+                                            DNS缓存 - systemd-resolve --statistics
+                                        </option>
+                                    </optgroup>
+                                    <optgroup label="网络状态">
+                                        <option value="network_interfaces" data-category="network" data-desc="查看网络接口配置">
+                                            网络接口 - ip addr
+                                        </option>
+                                        <option value="network_connections" data-category="network" data-desc="查看网络连接状态">
+                                            网络连接 - netstat -tuln
+                                        </option>
+                                        <option value="port_listen" data-category="network" data-desc="查看监听端口">
+                                            监听端口 - ss -tlnp
+                                        </option>
+                                        <option value="route_table" data-category="network" data-desc="查看路由表">
+                                            路由表 - ip route
+                                        </option>
+                                    </optgroup>
+                                    <optgroup label="服务管理">
+                                        <option value="service_list" data-category="service" data-desc="查看所有服务状态">
+                                            服务列表 - systemctl list-units
+                                        </option>
+                                        <option value="service_status" data-category="service" data-desc="查看特定服务状态">
+                                            服务状态 - systemctl status
+                                        </option>
+                                        <option value="service_failed" data-category="service" data-desc="查看失败的服务">
+                                            失败服务 - systemctl --failed
+                                        </option>
+                                    </optgroup>
+                                    <optgroup label="安全检查">
+                                        <option value="ssh_config" data-category="security" data-desc="查看SSH配置">
+                                            SSH配置 - cat /etc/ssh/sshd_config
+                                        </option>
+                                        <option value="firewall_status" data-category="security" data-desc="查看防火墙状态">
+                                            防火墙状态 - ufw status
+                                        </option>
+                                        <option value="selinux_status" data-category="security" data-desc="查看SELinux状态">
+                                            SELinux状态 - getenforce
+                                        </option>
+                                        <option value="login_history" data-category="security" data-desc="查看用户登录历史">
+                                            登录历史 - last
+                                        </option>
+                                    </optgroup>
+                                    <optgroup label="其他常用">
+                                        <option value="package_list" data-category="other" data-desc="查看已安装的软件包">
+                                            软件包列表 - dpkg -l
+                                        </option>
+                                        <option value="systemd_journal" data-category="other" data-desc="查看系统日志">
+                                            系统日志 - journalctl -xe
+                                        </option>
+                                        <option value="file_search" data-category="other" data-desc="查找特定文件">
+                                            文件查找 - find / -name
+                                        </option>
+                                    </optgroup>
+                                </select>
+                                <i class="bi bi-chevron-down command-preset-icon"></i>
+                            </div>
+                            <div class="command-preview" id="command_preview">
+                                <div class="command-preview-label">原始命令（预览）：</div>
+                                <div class="command-preview-value" id="command_preview_value"></div>
+                            </div>
+                            <div class="form-text-hint">
+                                <i class="bi bi-info-circle"></i>
+                                <span>选择命令后将自动填充到下方的执行命令输入框</span>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Command Assistant -->
+                        <div class="ai-assistant-container">
+                            <div class="ai-assistant-header">
+                                <div class="ai-assistant-icon">
+                                    <i class="bi bi-cpu"></i>
+                                </div>
+                                <div>
+                                    <h4 class="ai-assistant-title">AI 命令助手</h4>
+                                    <p class="ai-assistant-subtitle">用自然语言描述您的需求，AI将生成对应的Linux命令</p>
+                                </div>
+                            </div>
+                            <div class="ai-input-wrapper">
+                                <div class="ai-input-group">
+                                    <input type="text" 
+                                           id="ai_command_input" 
+                                           class="ai-input-field" 
+                                           placeholder="例如：查看CPU使用率、查找大文件、重启nginx服务..."
+                                           autocomplete="off">
+                                    <button type="button" id="ai_generate_btn" class="ai-btn ai-btn-generate">
+                                        <i class="bi bi-magic"></i>
+                                        <span>生成命令</span>
+                                    </button>
+                                    <button type="button" id="ai_clear_btn" class="ai-btn ai-btn-clear" title="清空">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="ai-loading" id="ai_loading">
+                                    <div class="ai-spinner"></div>
+                                    <span>AI 正在分析并生成命令...</span>
+                                </div>
+                                <div class="ai-result" id="ai_result">
+                                    <div class="ai-result-label">原始命令（预览）：</div>
+                                    <div class="ai-result-command" id="ai_result_command"></div>
+                                </div>
+                                <div class="ai-error" id="ai_error">
+                                    <i class="bi bi-exclamation-triangle ai-error-icon"></i>
+                                    <span id="ai_error_message"></span>
+                                </div>
+                                <div class="ai-hint">
+                                    <i class="bi bi-lightbulb"></i>
+                                    <span>提示：支持 Ctrl+Enter 快捷键生成命令</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="command" class="form-label">执行命令</label>
+                            <textarea class="form-control" id="command" name="command" rows="3" required>{{ prefill_data.command }}</textarea>
+                            <div class="form-text text-muted small">提示：使用 &amp;&amp; 分隔多个命令，避免使用分号 ;</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="target_servers" class="form-label">目标服务器（多选）</label>
+                            <div class="overflow-auto" style="max-height: 200px; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 0.5rem;">
+                                {% for server in servers %}
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input" type="checkbox" value="{{ server.ip }}" id="server-{{ server.id }}" name="target_servers">
+                                        <label class="form-check-label" for="server-{{ server.id }}">
+                                            {{ server.name }} ({{ server.ip }}:{{ server.port }})
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="timeout" class="form-label">超时时间（秒，默认3600秒）</label>
+                            <input type="number" class="form-control" id="timeout" name="timeout" value="3600" min="1">
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('automation.index') }}" class="btn btn-secondary">取消</a>
+                            <button type="submit" class="btn btn-primary">添加任务</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const commandPresetSelect = document.getElementById('command_preset');
+            const commandTextarea = document.getElementById('command');
+            const commandPreview = document.getElementById('command_preview');
+            const commandPreviewValue = document.getElementById('command_preview_value');
+            
+            // 常用命令配置 - 内部命令
+            const commandConfigs = {
+                'system_load': 'top -bn1 | head -20',
+                'memory_status': 'free -h',
+                'disk_usage': 'df -h',
+                'process_status': 'ps aux | head -20',
+                'system_info': 'uname -a && cat /etc/os-release',
+                'time_sync': 'timedatectl status',
+                'ntp_status': 'systemctl status ntpd && systemctl status chronyd',
+                'time_settings': 'date && timedatectl',
+                'timezone_check': 'timedatectl | grep "Time zone"',
+                'timezone_list': 'timedatectl list-timezones | head -20',
+                'dns_resolver': 'resolvectl status',
+                'dns_hosts': 'cat /etc/hosts',
+                'dns_lookup': 'nslookup google.com',
+                'dns_cache': 'systemd-resolve --statistics',
+                'network_interfaces': 'ip addr show',
+                'network_connections': 'netstat -tuln',
+                'port_listen': 'ss -tlnp',
+                'route_table': 'ip route show',
+                'service_list': 'systemctl list-units --type=service --state=running | head -20',
+                'service_status': 'systemctl status [服务名]',
+                'service_failed': 'systemctl --failed',
+                'ssh_config': 'cat /etc/ssh/sshd_config | grep -E "^Port|^PermitRootLogin|^PasswordAuthentication"',
+                'firewall_status': 'ufw status verbose',
+                'selinux_status': 'getenforce && sestatus',
+                'login_history': 'last -n 20',
+                'package_list': 'dpkg -l | head -20',
+                'systemd_journal': 'journalctl -xe --no-pager | tail -50',
+                'file_search': 'find / -name "[文件名]" 2>/dev/null | head -10'
+            };
+            
+            // 将命令包装为 /bin/bash -c 格式
+            function wrapCommand(innerCommand) {
+                return `/bin/bash -c "${innerCommand.replace(/"/g, '\\"')}"`;
+            }
+            
+            // 验证函数：确保选择操作正确触发
+            function validateSelection(value) {
+                return value && commandConfigs.hasOwnProperty(value);
+            }
+            
+            // 更新命令输入框
+            function updateCommandInput(commandKey) {
+                if (validateSelection(commandKey)) {
+                    const innerCommand = commandConfigs[commandKey];
+                    const fullCommand = wrapCommand(innerCommand);
+                    
+                    // 更新输入框（显示完整命令）
+                    commandTextarea.value = fullCommand;
+                    
+                    // 显示预览（显示内部命令）
+                    commandPreviewValue.textContent = innerCommand;
+                    commandPreview.classList.add('show');
+                    
+                    // 触发输入事件，确保其他监听器能收到通知
+                    commandTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    console.log('命令已更新:', commandKey, fullCommand);
+                } else {
+                    // 清空预览
+                    commandPreview.classList.remove('show');
+                }
+            }
+            
+            // 监听选择变化
+            commandPresetSelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                
+                // 验证选择
+                if (!validateSelection(selectedValue)) {
+                    console.warn('无效的命令选择:', selectedValue);
+                    commandPreview.classList.remove('show');
+                    return;
+                }
+                
+                // 执行联动更新
+                updateCommandInput(selectedValue);
+                
+                // 添加视觉反馈
+                this.style.borderColor = '#198754';
+                setTimeout(() => {
+                    this.style.borderColor = '';
+                }, 300);
+            });
+            
+            // 重置预览当用户手动编辑命令时
+            commandTextarea.addEventListener('input', function() {
+                const presetValue = commandPresetSelect.value;
+                if (presetValue && this.value !== commandConfigs[presetValue]) {
+                    // 用户修改了预设命令，取消预设选择
+                    commandPresetSelect.value = '';
+                    commandPreview.classList.remove('show');
+                }
+            });
+            
+            // 表单提交前验证
+            document.querySelector('form').addEventListener('submit', function(e) {
+                const command = commandTextarea.value.trim();
+                if (!command) {
+                    e.preventDefault();
+                    alert('请输入执行命令');
+                    commandTextarea.focus();
+                    return false;
+                }
+                return true;
+            });
+            
+            // =============================================
+            // AI Command Assistant Implementation
+            // =============================================
+            (function() {
+                const aiInput = document.getElementById('ai_command_input');
+                const aiGenerateBtn = document.getElementById('ai_generate_btn');
+                const aiClearBtn = document.getElementById('ai_clear_btn');
+                const aiLoading = document.getElementById('ai_loading');
+                const aiResult = document.getElementById('ai_result');
+                const aiResultCommand = document.getElementById('ai_result_command');
+                const aiError = document.getElementById('ai_error');
+                const aiErrorMessage = document.getElementById('ai_error_message');
+                const commandTextarea = document.getElementById('command');
+                
+                // Validate input is not empty
+                function validateInput(value) {
+                    const trimmed = value.trim();
+                    if (!trimmed) {
+                        return { valid: false, error: '请输入命令描述' };
+                    }
+                    if (trimmed.length < 3) {
+                        return { valid: false, error: '描述太短，请提供更详细的信息' };
+                    }
+                    if (trimmed.length > 500) {
+                        return { valid: false, error: '描述太长，请简化' };
+                    }
+                    return { valid: true, value: trimmed };
+                }
+                
+                // Show error message
+                function showError(message) {
+                    aiErrorMessage.textContent = message;
+                    aiError.classList.add('show');
+                    aiResult.classList.remove('show');
+                    aiLoading.classList.remove('show');
+                    aiGenerateBtn.disabled = false;
+                }
+                
+                // Hide error message
+                function hideError() {
+                    aiError.classList.remove('show');
+                }
+                
+                // Show loading indicator
+                function showLoading() {
+                    aiLoading.classList.add('show');
+                    aiResult.classList.remove('show');
+                    aiError.classList.remove('show');
+                    aiGenerateBtn.disabled = true;
+                }
+                
+                // Hide loading indicator
+                function hideLoading() {
+                    aiLoading.classList.remove('show');
+                    aiGenerateBtn.disabled = false;
+                }
+                
+                // Show result
+                function showResult(innerCommand, originalPrompt) {
+                    const fullCommand = wrapCommand(innerCommand);
+                    aiResultCommand.textContent = innerCommand;
+                    aiResult.classList.add('show');
+                    aiError.classList.remove('show');
+                    
+                    // Store AI prompt for analysis
+                    const aiPromptField = document.getElementById('ai_prompt');
+                    if (aiPromptField && originalPrompt) {
+                        aiPromptField.value = originalPrompt;
+                    }
+                    
+                    // Auto-populate to command textarea (with wrapper)
+                    commandTextarea.value = fullCommand;
+                    commandTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                
+                // Clear all
+                function clearAll() {
+                    aiInput.value = '';
+                    aiResult.classList.remove('show');
+                    aiError.classList.remove('show');
+                    aiLoading.classList.remove('show');
+                    aiGenerateBtn.disabled = false;
+                    
+                    // Clear AI prompt
+                    const aiPromptField = document.getElementById('ai_prompt');
+                    if (aiPromptField) {
+                        aiPromptField.value = '';
+                    }
+                }
+                
+                // Generate command using AI
+                async function generateCommand() {
+                    const validation = validateInput(aiInput.value);
+                    if (!validation.valid) {
+                        showError(validation.error);
+                        return;
+                    }
+                    
+                    hideError();
+                    showLoading();
+                    
+                    try {
+                        const response = await fetch('/api/v1/ai/generate-command', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                prompt: validation.value
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                            throw new Error(data.message || 'AI 服务请求失败');
+                        }
+                        
+                        if (data.success && data.command) {
+                            showResult(data.command, validation.value);
+                        } else {
+                            throw new Error(data.message || '未能生成有效命令');
+                        }
+                    } catch (error) {
+                        console.error('AI command generation error:', error);
+                        showError(error.message || 'AI 服务暂时不可用，请稍后再试');
+                    } finally {
+                        hideLoading();
+                    }
+                }
+                
+                // Event Listeners
+                aiGenerateBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    generateCommand();
+                });
+                
+                aiClearBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    clearAll();
+                    commandTextarea.value = '';
+                    commandTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                });
+                
+                // Keyboard shortcut: Ctrl+Enter to generate
+                aiInput.addEventListener('keydown', function(e) {
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        e.preventDefault();
+                        if (!aiGenerateBtn.disabled) {
+                            generateCommand();
+                        }
+                    }
+                });
+                
+                // Clear error when user starts typing
+                aiInput.addEventListener('input', function() {
+                    hideError();
+                });
+                
+            })();
+        })();
+    </script>
+{% endblock %}
