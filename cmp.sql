@@ -1,19 +1,3 @@
-/*
- Navicat Premium Data Transfer
-
- Source Server         : 192.168.20.154
- Source Server Type    : MySQL
- Source Server Version : 80045 (8.0.45)
- Source Host           : 192.168.20.154:3306
- Source Schema         : cmp
-
- Target Server Type    : MySQL
- Target Server Version : 80045 (8.0.45)
- File Encoding         : 65001
-
- Date: 22/04/2026 10:43:17
-*/
-
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
